@@ -368,57 +368,64 @@ def compute_summary(df: pd.DataFrame, pricing_model: str, hours_per_month: float
 
 def create_output_excel(df: pd.DataFrame, summary: Dict, output: Union[str, BytesIO]) -> None:
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # 1. Results sheet - all data unchanged
         df.to_excel(writer, sheet_name='Results', index=False)
-        summary_df = pd.DataFrame([
-            {'Category': 'Total Monthly Cost', 'Value': summary['total_monthly_cost']},
-            {'Category': 'Total Yearly Cost', 'Value': summary['total_yearly_cost']},
-            {'Category': 'Total Instances', 'Value': summary['total_instances']},
-            {'Category': 'Resources Needing Review', 'Value': summary['needs_review_count']}
+        
+        # 2. Summary sheet - table format with Service, Count, Total Cost
+        ecs_df = df[df['Resource Type'].str.lower() == 'ecs']
+        db_df = df[df['Resource Type'].str.lower() == 'database']
+        oss_df = df[df['Resource Type'].str.lower() == 'oss']
+        
+        summary_table = pd.DataFrame([
+            {'Service': 'ECS', 'Count': int(ecs_df['Quantity'].sum()), 'Total Cost': summary['by_type'].get('ECS', 0)},
+            {'Service': 'Database', 'Count': int(db_df['Quantity'].sum()), 'Total Cost': summary['by_type'].get('Database', 0)},
+            {'Service': 'OSS', 'Count': int(oss_df['Quantity'].sum()), 'Total Cost': summary['by_type'].get('OSS', 0)},
+            {'Service': 'GRAND TOTAL', 'Count': int(df['Quantity'].sum()), 'Total Cost': summary['total_monthly_cost']}
         ])
-        summary_df.to_excel(writer, sheet_name='Summary', index=False)
-        type_summary_df = pd.DataFrame([
-            {'Resource Type': k, 'Total Cost': v}
-            for k, v in summary['by_type'].items()
-        ])
-        if not type_summary_df.empty:
-            type_summary_df.to_excel(writer, sheet_name='By Resource Type', index=False)
-        family_summary_df = pd.DataFrame([
-            {'Flavor Family': k, 'Total Cost': v}
-            for k, v in summary['by_flavor_family'].items()
-        ])
-        if not family_summary_df.empty:
-            family_summary_df.to_excel(writer, sheet_name='By Flavor Family', index=False)
-        db_type_summary_df = pd.DataFrame([
-            {'DB Type': k, 'Total Cost': v}
-            for k, v in summary['by_db_type'].items()
-        ])
-        if not db_type_summary_df.empty:
-            db_type_summary_df.to_excel(writer, sheet_name='By DB Type', index=False)
-        deployment_summary_df = pd.DataFrame([
-            {'Deployment': k, 'Total Cost': v}
-            for k, v in summary['by_deployment'].items()
-        ])
-        if not deployment_summary_df.empty:
-            deployment_summary_df.to_excel(writer, sheet_name='By Deployment', index=False)
-        oss_summary_data = []
-        if 'oss_storage_cost' in summary and summary['oss_storage_cost'] > 0:
-            oss_summary_data.extend([
-                {'Category': 'OSS Storage Cost', 'Value': summary['oss_storage_cost']},
-                {'Category': 'OSS Request Cost', 'Value': summary['oss_request_cost']},
-                {'Category': 'OSS Retrieval Cost', 'Value': summary['oss_retrieval_cost']},
-                {'Category': 'OSS Traffic Cost', 'Value': summary['oss_traffic_cost']}
+        summary_table.to_excel(writer, sheet_name='Summary', index=False)
+        
+        # 3. ECS sheet - ECS rows + Flavor Family summary
+        if not ecs_df.empty:
+            ecs_df.to_excel(writer, sheet_name='ECS', index=False)
+            if summary.get('by_flavor_family'):
+                family_df = pd.DataFrame([
+                    {'Flavor Family': k, 'Total Cost': v}
+                    for k, v in summary['by_flavor_family'].items()
+                ])
+                family_df.to_excel(writer, sheet_name='ECS', index=False, startrow=len(ecs_df) + 3)
+        
+        # 4. Database sheet - DB rows + DB Type summary + Deployment summary
+        if not db_df.empty:
+            db_df.to_excel(writer, sheet_name='Database', index=False)
+            start_row = len(db_df) + 3
+            
+            if summary.get('by_db_type'):
+                db_type_df = pd.DataFrame([
+                    {'DB Type': k, 'Total Cost': v}
+                    for k, v in summary['by_db_type'].items()
+                ])
+                db_type_df.to_excel(writer, sheet_name='Database', index=False, startrow=start_row)
+                start_row += len(db_type_df) + 3
+            
+            if summary.get('by_deployment'):
+                deployment_df = pd.DataFrame([
+                    {'Deployment': k, 'Total Cost': v}
+                    for k, v in summary['by_deployment'].items()
+                ])
+                deployment_df.to_excel(writer, sheet_name='Database', index=False, startrow=start_row)
+        
+        # 5. OSS sheet - OSS rows + OSS metrics summary
+        if not oss_df.empty:
+            oss_df.to_excel(writer, sheet_name='OSS', index=False)
+            oss_summary_df = pd.DataFrame([
+                {'OSS Metric': 'Total Storage Cost', 'Value': summary.get('oss_storage_cost', 0)},
+                {'OSS Metric': 'Total Request Cost', 'Value': summary.get('oss_request_cost', 0)},
+                {'OSS Metric': 'Total Retrieval Cost', 'Value': summary.get('oss_retrieval_cost', 0)},
+                {'OSS Metric': 'Total Traffic Cost', 'Value': summary.get('oss_traffic_cost', 0)}
             ])
-            oss_storage_class_df = pd.DataFrame([
-                {'Storage Class': k, 'Total Cost': v}
-                for k, v in summary.get('by_oss_storage_class', {}).items()
-            ])
-            if not oss_storage_class_df.empty:
-                oss_summary_data.append({'Category': '--- By Storage Class ---', 'Value': ''})
-                for _, row in oss_storage_class_df.iterrows():
-                    oss_summary_data.append({'Category': f"  {row['Storage Class']}", 'Value': row['Total Cost']})
-        if oss_summary_data:
-            oss_summary_df = pd.DataFrame(oss_summary_data)
-            oss_summary_df.to_excel(writer, sheet_name='OSS Summary', index=False)
+            oss_summary_df.to_excel(writer, sheet_name='OSS', index=False, startrow=len(oss_df) + 3)
+        
+        # 6. Unmapped Resources sheet - unchanged
         unmapped_df = df[df['Mapping Status'].str.contains('Review', case=False, na=False)]
         if not unmapped_df.empty:
             unmapped_df.to_excel(writer, sheet_name='Unmapped Resources', index=False)
