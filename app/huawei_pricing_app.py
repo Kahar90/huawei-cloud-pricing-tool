@@ -38,6 +38,8 @@ def validate_dataframe(df: pd.DataFrame) -> Tuple[bool, str]:
     missing = [col for col in required_cols if col not in df_cols]
     if missing:
         return False, f"Missing required columns: {', '.join(missing)}"
+    
+    # Convert numeric columns
     for col in ['vCPUs', 'RAM (GB)', 'Storage (GB)', 'Quantity']:
         if col in df_cols:
             if not pd.api.types.is_numeric_dtype(df[col]):
@@ -45,19 +47,28 @@ def validate_dataframe(df: pd.DataFrame) -> Tuple[bool, str]:
                     df[col] = pd.to_numeric(df[col], errors='coerce')
                 except:
                     return False, f"Column '{col}' contains invalid numeric values"
+    
+    # Convert string columns to string type
+    for col in ['Resource Type', 'Storage Type', 'Desired Tier', 'DB Type', 'Deployment']:
+        if col in df_cols:
+            df[col] = df[col].astype(str)
+    
     valid_storage_types = ['SSD', 'HighIO', 'UltraHighIO', 'GeneralSSDv2', 'ExtremeSSD', 'General Purpose SSD', 'High I/O', 'Ultra-high I/O', 'Extreme SSD']
     if 'Storage Type' in df_cols:
         for stype in df['Storage Type'].unique():
-            stype_clean = str(stype).strip()
-            stype_lower = stype_clean.lower().replace('-', '').replace(' ', '').replace('_', '')
+            stype_str = str(stype).strip()
+            stype_lower = stype_str.lower().replace('-', '').replace(' ', '').replace('_', '')
             valid_lower = [s.lower().replace('-', '').replace(' ', '').replace('_', '') for s in valid_storage_types]
             if stype_lower not in valid_lower:
-                st.error(f"Warning: Unknown Storage Type '{stype}'. Valid types: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD")
+                st.warning(f"Unknown Storage Type '{stype_str}'. Will try to match. Valid types: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD")
+    
     valid_resource_types = ['ECS', 'Database']
     if 'Resource Type' in df_cols:
         for rtype in df['Resource Type'].unique():
-            if str(rtype).strip() not in valid_resource_types:
-                return False, f"Invalid Resource Type: '{rtype}'. Valid values: {', '.join(valid_resource_types)}"
+            rtype_str = str(rtype).strip()
+            if rtype_str not in valid_resource_types:
+                return False, f"Invalid Resource Type: '{rtype_str}'. Valid values: {', '.join(valid_resource_types)}"
+    
     return True, "Validation successful"
 
 def process_file(
