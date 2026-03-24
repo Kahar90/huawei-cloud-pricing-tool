@@ -170,37 +170,50 @@ def compute_summary(df: pd.DataFrame, pricing_model: str, hours_per_month: float
 def create_output_excel(df: pd.DataFrame, summary: Dict, output: Union[str, BytesIO]) -> None:
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, sheet_name='Results', index=False)
-        summary_df = pd.DataFrame([
-            {'Category': 'Total Monthly Cost', 'Value': summary['total_monthly_cost']},
-            {'Category': 'Total Yearly Cost', 'Value': summary['total_yearly_cost']},
-            {'Category': 'Total Instances', 'Value': summary['total_instances']},
-            {'Category': 'Resources Needing Review', 'Value': summary['needs_review_count']}
-        ])
+
+        by_type = summary['by_type']
+        total = summary['total_monthly_cost']
+        summary_rows = [
+            {'Service': service, 'Count': count, 'Total Cost': cost}
+            for service, cost in by_type.items()
+            for count in [len(df[df['Resource Type'].str.lower() == service.lower()])]
+        ]
+        summary_rows.append({'Service': 'GRAND TOTAL', 'Count': '', 'Total Cost': total})
+        summary_df = pd.DataFrame(summary_rows)
         summary_df.to_excel(writer, sheet_name='Summary', index=False)
-        type_summary_df = pd.DataFrame([
-            {'Resource Type': k, 'Total Cost': v}
-            for k, v in summary['by_type'].items()
-        ])
-        if not type_summary_df.empty:
-            type_summary_df.to_excel(writer, sheet_name='By Resource Type', index=False)
-        family_summary_df = pd.DataFrame([
-            {'Flavor Family': k, 'Total Cost': v}
-            for k, v in summary['by_flavor_family'].items()
-        ])
-        if not family_summary_df.empty:
-            family_summary_df.to_excel(writer, sheet_name='By Flavor Family', index=False)
-        db_type_summary_df = pd.DataFrame([
-            {'DB Type': k, 'Total Cost': v}
-            for k, v in summary['by_db_type'].items()
-        ])
-        if not db_type_summary_df.empty:
-            db_type_summary_df.to_excel(writer, sheet_name='By DB Type', index=False)
-        deployment_summary_df = pd.DataFrame([
-            {'Deployment': k, 'Total Cost': v}
-            for k, v in summary['by_deployment'].items()
-        ])
-        if not deployment_summary_df.empty:
-            deployment_summary_df.to_excel(writer, sheet_name='By Deployment', index=False)
+
+        ecs_df = df[df['Resource Type'].str.lower() == 'ecs']
+        if not ecs_df.empty:
+            ecs_df.to_excel(writer, sheet_name='ECS', index=False)
+            flavor_family_df = pd.DataFrame([
+                {'Flavor Family': k, 'Total Cost': v}
+                for k, v in summary['by_flavor_family'].items()
+            ])
+            if not flavor_family_df.empty:
+                flavor_family_df.to_excel(writer, sheet_name='ECS', index=False, startrow=len(ecs_df) + 2)
+
+        db_df = df[df['Resource Type'].str.lower() == 'database']
+        if not db_df.empty:
+            db_df.to_excel(writer, sheet_name='Database', index=False)
+            start_row = len(db_df) + 2
+            db_type_df = pd.DataFrame([
+                {'DB Type': k, 'Total Cost': v}
+                for k, v in summary['by_db_type'].items()
+            ])
+            if not db_type_df.empty:
+                db_type_df.to_excel(writer, sheet_name='Database', index=False, startrow=start_row)
+                start_row += len(db_type_df) + 2
+            deployment_df = pd.DataFrame([
+                {'Deployment': k, 'Total Cost': v}
+                for k, v in summary['by_deployment'].items()
+            ])
+            if not deployment_df.empty:
+                deployment_df.to_excel(writer, sheet_name='Database', index=False, startrow=start_row)
+
+        oss_df = df[df['Resource Type'].str.lower() == 'oss']
+        if not oss_df.empty:
+            oss_df.to_excel(writer, sheet_name='OSS', index=False)
+
         unmapped_df = df[df['Mapping Status'].str.contains('Review', case=False, na=False)]
         if not unmapped_df.empty:
             unmapped_df.to_excel(writer, sheet_name='Unmapped Resources', index=False)
