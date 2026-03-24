@@ -219,10 +219,10 @@ def calculate_all_costs(
         else:
             vcpus = int(row.get('vCPUs', 0) or 0) if pd.notna(row.get('vCPUs')) else 0
             ram_gb = int(row.get('RAM (GB)', 0) or 0) if pd.notna(row.get('RAM (GB)')) else 0
-        storage_gb = int(row.get('Storage (GB)', 0) or 0)
+        storage_gb = int(row.get('Storage (GB)', 0) or 0) if pd.notna(row.get('Storage (GB)')) else 0
         storage_type = str(row.get('Storage Type', 'SSD')).strip()
         region = default_region
-        quantity = int(row.get('Quantity', 1) or 1)
+        quantity = int(row.get('Quantity', 1) or 1) if pd.notna(row.get('Quantity')) else 1
         desired_tier = row.get('Desired Tier', '')
         flavor_name = mapping.get('flavor')
         flavor_family = mapping.get('flavor_family')
@@ -321,7 +321,7 @@ def calculate_all_costs(
 def compute_summary(df: pd.DataFrame, pricing_model: str, hours_per_month: float) -> Dict:
     total_monthly_cost = df['Total Cost for Quantity'].sum()
     total_yearly_cost = total_monthly_cost * 12
-    total_instances = df['Quantity'].sum()
+    total_instances = int(df['Quantity'].fillna(0).sum())
     needs_review_count = df[df['Mapping Status'].str.contains('Review', case=False, na=False)].shape[0]
     summary_by_type = df.groupby('Resource Type')['Total Cost for Quantity'].sum().to_dict()
     ecs_df = df[df['Resource Type'].str.lower() == 'ecs']
