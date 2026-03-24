@@ -1,0 +1,82 @@
+{
+  "region": "ap-southeast-3",
+  "region_name": "AP-Jakarta",
+  "databases": {
+    "mysql": [
+      {
+        "name": "rds.mysql.c6.large.4",
+        "vcpus": 2,
+        "ram_gb": 8,
+        "pricing": {
+          "single": {"hourly": 0.06, "monthly": 40.00, "yearly": 432.00},
+          "ha": {"hourly": 0.12, "monthly": 80.00, "yearly": 864.00}
+        }
+      },
+      {
+        "name": "rds.mysql.c6.xlarge.4",
+        "vcpus": 4,
+        "ram_gb": 16,
+        "pricing": {
+          "single": {"hourly": 0.12, "monthly": 80.00, "yearly": 864.00},
+          "ha": {"hourly": 0.24, "monthly": 160.00, "yearly": 1728.00}
+        }
+      },
+      {
+        "name": "rds.mysql.c6.2xlarge.4",
+        "vcpus": 8,
+        "ram_gb": 32,
+        "pricing": {
+          "single": {"hourly": 0.24, "monthly": 160.00, "yearly": 1728.00},
+          "ha": {"hourly": 0.48, "monthly": 320.00, "yearly": 3456.00}
+        }
+      },
+      {
+        "name": "rds.mysql.c6.4xlarge.4",
+        "vcpus": 16,
+        "ram_gb": 64,
+        "pricing": {
+          "single": {"hourly": 0.48, "monthly": 320.00, "yearly": 3456.00},
+          "ha": {"hourly": 0.96, "monthly": 640.00, "yearly": 6912.00}
+        }
+      }
+    ],
+    "postgresql": [
+      {
+        "name": "rds.pg.c6.large.4",
+        "vcpus": 2,
+        "ram_gb": 8,
+        "pricing": {
+          "single": {"hourly": 0.065, "monthly": 45.00, "yearly": 486.00},
+          "ha": {"hourly": 0.13, "monthly": 90.00, "yearly": 972.00}
+        }
+      },
+      {
+        "name": "rds.pg.c6.xlarge.4",
+        "vcpus": 4,
+        "ram_gb": 16,
+        "pricing": {
+          "single": {"hourly": 0.13, "monthly": 90.00, "yearly": 972.00},
+          "ha": {"hourly": 0.26, "monthly": 180.00, "yearly": 1944.00}
+        }
+      },
+      {
+        "name": "rds.pg.c6.2xlarge.4",
+        "vcpus": 8,
+        "ram_gb": 32,
+        "pricing": {
+          "single": {"hourly": 0.26, "monthly": 180.00, "yearly": 1944.00},
+          "ha": {"hourly": 0.52, "monthly": 360.00, "yearly": 3888.00}
+        }
+      },
+      {
+        "name": "rds.pg.c6.4xlarge.4",
+        "vcpus": 16,
+        "ram_gb": 64,
+        "pricing": {
+          "single": {"hourly": 0.52, "monthly": 360.00, "yearly": 3888.00},
+          "ha": {"hourly": 1.04, "monthly": 720.00, "yearly": 7776.00}
+        }
+      }
+    ]
+  }
+}

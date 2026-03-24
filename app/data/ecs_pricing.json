@@ -1,0 +1,141 @@
+{
+  "region": "ap-southeast-3",
+  "region_name": "AP-Jakarta",
+  "flavors": [
+    {
+      "name": "s6.large.2",
+      "family": "general",
+      "vcpus": 2,
+      "ram_gb": 8,
+      "hourly": 0.042,
+      "monthly": 28.00,
+      "yearly": 302.40
+    },
+    {
+      "name": "s6.xlarge.2",
+      "family": "general",
+      "vcpus": 4,
+      "ram_gb": 16,
+      "hourly": 0.084,
+      "monthly": 56.00,
+      "yearly": 604.80
+    },
+    {
+      "name": "s6.2xlarge.2",
+      "family": "general",
+      "vcpus": 8,
+      "ram_gb": 32,
+      "hourly": 0.168,
+      "monthly": 112.00,
+      "yearly": 1209.60
+    },
+    {
+      "name": "s6.4xlarge.2",
+      "family": "general",
+      "vcpus": 16,
+      "ram_gb": 64,
+      "hourly": 0.336,
+      "monthly": 224.00,
+      "yearly": 2419.20
+    },
+    {
+      "name": "s6.8xlarge.2",
+      "family": "general",
+      "vcpus": 32,
+      "ram_gb": 128,
+      "hourly": 0.672,
+      "monthly": 448.00,
+      "yearly": 4838.40
+    },
+    {
+      "name": "c6.large.2",
+      "family": "compute",
+      "vcpus": 2,
+      "ram_gb": 4,
+      "hourly": 0.038,
+      "monthly": 25.00,
+      "yearly": 270.00
+    },
+    {
+      "name": "c6.xlarge.2",
+      "family": "compute",
+      "vcpus": 4,
+      "ram_gb": 8,
+      "hourly": 0.076,
+      "monthly": 50.00,
+      "yearly": 540.00
+    },
+    {
+      "name": "c6.2xlarge.2",
+      "family": "compute",
+      "vcpus": 8,
+      "ram_gb": 16,
+      "hourly": 0.152,
+      "monthly": 100.00,
+      "yearly": 1080.00
+    },
+    {
+      "name": "c6.4xlarge.2",
+      "family": "compute",
+      "vcpus": 16,
+      "ram_gb": 32,
+      "hourly": 0.304,
+      "monthly": 200.00,
+      "yearly": 2160.00
+    },
+    {
+      "name": "c6.8xlarge.2",
+      "family": "compute",
+      "vcpus": 32,
+      "ram_gb": 64,
+      "hourly": 0.608,
+      "monthly": 400.00,
+      "yearly": 4320.00
+    },
+    {
+      "name": "m6.large.4",
+      "family": "memory",
+      "vcpus": 2,
+      "ram_gb": 16,
+      "hourly": 0.055,
+      "monthly": 36.00,
+      "yearly": 388.80
+    },
+    {
+      "name": "m6.xlarge.4",
+      "family": "memory",
+      "vcpus": 4,
+      "ram_gb": 32,
+      "hourly": 0.110,
+      "monthly": 72.00,
+      "yearly": 777.60
+    },
+    {
+      "name": "m6.2xlarge.4",
+      "family": "memory",
+      "vcpus": 8,
+      "ram_gb": 64,
+      "hourly": 0.220,
+      "monthly": 144.00,
+      "yearly": 1555.20
+    },
+    {
+      "name": "m6.4xlarge.4",
+      "family": "memory",
+      "vcpus": 16,
+      "ram_gb": 128,
+      "hourly": 0.440,
+      "monthly": 288.00,
+      "yearly": 3110.40
+    },
+    {
+      "name": "m6.8xlarge.4",
+      "family": "memory",
+      "vcpus": 32,
+      "ram_gb": 256,
+      "hourly": 0.880,
+      "monthly": 576.00,
+      "yearly": 6220.80
+    }
+  ]
+}

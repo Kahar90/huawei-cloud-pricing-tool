@@ -1,0 +1,9 @@
+{
+  "region": "ap-southeast-3",
+  "region_name": "AP-Jakarta",
+  "types": [
+    {"name": "SSD", "price_per_gb": 0.10},
+    {"name": "HighIO", "price_per_gb": 0.15},
+    {"name": "UltraHighIO", "price_per_gb": 0.20}
+  ]
+}
