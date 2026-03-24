@@ -4,7 +4,7 @@ import os
 from io import BytesIO
 from typing import Dict, Optional, Tuple
 from mapping_engine import (
-    load_ecs_pricing, load_db_pricing, load_storage_pricing,
+    load_ecs_pricing, load_db_pricing, load_storage_pricing, load_oss_pricing,
     get_region, get_available_db_types, map_resources
 )
 from pricing_calculator import calculate_all_costs, compute_summary, create_output_excel
@@ -19,16 +19,23 @@ REQUIRED_COLUMNS = [
 
 def create_standard_template() -> pd.DataFrame:
     data = {
-        'Resource Type': ['ECS', 'ECS', 'Database', 'ECS', 'Database'],
-        'vCPUs': [2, 4, 4, 8, 2],
-        'RAM (GB)': [8, 16, 16, 32, 8],
-        'Storage (GB)': [100, 200, 500, 400, 100],
-        'Storage Type': ['SSD', 'HighIO', 'UltraHighIO', 'GeneralSSDv2', 'HighIO'],
-        'Region': [DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION],
-        'Quantity': [1, 2, 1, 3, 1],
-        'Desired Tier': ['general-computing-plus', 'general-computing-plus', '', 'memory-optimized', ''],
-        'DB Type': ['', '', 'mysql', '', 'postgresql'],
-        'Deployment': ['', '', 'single', '', 'ha']
+        'Resource Type': ['ECS', 'ECS', 'Database', 'ECS', 'Database', 'OSS'],
+        'vCPUs': [2, 4, 4, 8, 2, 0],
+        'RAM (GB)': [8, 16, 16, 32, 8, 0],
+        'Storage (GB)': [100, 200, 500, 400, 100, 1000],
+        'Storage Type': ['SSD', 'HighIO', 'UltraHighIO', 'GeneralSSDv2', 'HighIO', 'Standard'],
+        'Region': [DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION],
+        'Quantity': [1, 2, 1, 3, 1, 1],
+        'Desired Tier': ['general-computing-plus', 'general-computing-plus', '', 'memory-optimized', '', ''],
+        'DB Type': ['', '', 'mysql', '', 'postgresql', ''],
+        'Deployment': ['', '', 'single', '', 'ha', ''],
+        'Availability Zone': ['', '', '', '', '', 'single-az'],
+        'Requests Read': [0, 0, 0, 0, 0, 10000],
+        'Requests Write': [0, 0, 0, 0, 0, 5000],
+        'Requests Delete': [0, 0, 0, 0, 0, 1000],
+        'Data Retrieval GB': [0, 0, 0, 0, 0, 0],
+        'Retrieval Type': ['', '', '', '', '', ''],
+        'Internet Outbound GB': [0, 0, 0, 0, 0, 100]
     }
     return pd.DataFrame(data)
 
@@ -62,7 +69,7 @@ def validate_dataframe(df: pd.DataFrame) -> Tuple[bool, str]:
             if stype_lower not in valid_lower:
                 st.warning(f"Unknown Storage Type '{stype_str}'. Will try to match. Valid types: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD")
     
-    valid_resource_types = ['ECS', 'Database']
+    valid_resource_types = ['ECS', 'Database', 'OSS']
     if 'Resource Type' in df_cols:
         for rtype in df['Resource Type'].unique():
             rtype_str = str(rtype).strip()
@@ -79,7 +86,8 @@ def process_file(
     default_deployment: str,
     ecs_data: Dict,
     db_data: Dict,
-    storage_data: Dict
+    storage_data: Dict,
+    oss_data: Dict
 ) -> Tuple[pd.DataFrame, Dict]:
     mapping_results, ecs_flavors = map_resources(
         df, ecs_data, db_data, default_db_type, default_deployment
@@ -88,7 +96,7 @@ def process_file(
     result_df = calculate_all_costs(
         df, mapping_results, ecs_flavors, region,
         pricing_model, hours_per_month,
-        ecs_data, db_data, storage_data
+        ecs_data, db_data, storage_data, oss_data
     )
     summary = compute_summary(result_df, pricing_model, hours_per_month)
     return result_df, summary
@@ -111,6 +119,7 @@ def main():
     ecs_data = load_ecs_pricing()
     db_data = load_db_pricing()
     storage_data = load_storage_pricing()
+    oss_data = load_oss_pricing()
     available_db_types = get_available_db_types(db_data)
     with st.sidebar:
         st.header("Configuration")
@@ -192,7 +201,7 @@ def main():
                     result_df, summary = process_file(
                         df, pricing_model, hours_per_month,
                         default_db_type, default_deployment,
-                        ecs_data, db_data, storage_data
+                        ecs_data, db_data, storage_data, oss_data
                     )
                 st.success("✅ Processing complete!")
                 st.markdown("---")
@@ -224,17 +233,24 @@ def main():
     else:
         st.info("👆 Please upload an Excel file to begin.")
         st.markdown("### Required Columns:")
-        st.markdown("- **Resource Type**: ECS or Database")
+        st.markdown("- **Resource Type**: ECS, Database, or OSS")
         st.markdown("- **vCPUs**: Number of virtual CPUs")
         st.markdown("- **RAM (GB)**: Memory in gigabytes")
         st.markdown("- **Storage (GB)**: Storage size in gigabytes")
-        st.markdown("- **Storage Type**: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD")
+        st.markdown("- **Storage Type**: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD (ECS/DB) or Standard, InfrequentAccess, Archive, DeepArchive (OSS)")
         st.markdown("- **Quantity**: Number of instances (default: 1)")
         st.markdown("---")
         st.markdown("### Optional Columns:")
         st.markdown("- **Desired Tier** *(ECS only)*: general-computing-plus, general-computing-basic, memory-optimized, disk-intensive, large-memory")
         st.markdown("- **DB Type** *(Database only)*: mysql, postgresql")
         st.markdown("- **Deployment** *(Database only)*: single or ha")
+        st.markdown("- **Availability Zone** *(OSS only)*: single-az or multi-az")
+        st.markdown("- **Requests Read** *(OSS only)*: Number of read requests")
+        st.markdown("- **Requests Write** *(OSS only)*: Number of write requests")
+        st.markdown("- **Requests Delete** *(OSS only)*: Number of delete requests")
+        st.markdown("- **Data Retrieval GB** *(OSS only)*: Data retrieval volume in GB")
+        st.markdown("- **Retrieval Type** *(OSS only)*: Standard, Urgent, DirectReading")
+        st.markdown("- **Internet Outbound GB** *(OSS only)*: Internet outbound traffic in GB")
 
 if __name__ == "__main__":
     main()

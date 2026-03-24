@@ -22,6 +22,26 @@ def load_storage_pricing() -> Dict:
         return json.load(f)
 
 
+def load_oss_pricing() -> Dict:
+    with open(get_data_path('oss_pricing.json'), 'r') as f:
+        return json.load(f)
+
+
+def get_oss_storage_classes(oss_data: Dict) -> List[Dict]:
+    return oss_data.get('storage_classes', [])
+
+
+def get_oss_class_names(oss_data: Dict) -> List[str]:
+    validations = oss_data.get('validations', {})
+    return validations.get('storage_classes', [])
+
+
+def get_available_az_types(oss_data: Dict) -> List[str]:
+    validations = oss_data.get('validations', {})
+    return validations.get('availability_zones', ['single-az', 'multi-az'])
+
+
+
 def get_region(ecs_data: Dict) -> str:
     return ecs_data.get('region', 'ap-southeast-3')
 
@@ -119,6 +139,8 @@ def map_resource(
         if not db_flavors:
             return None, f"Unknown DB Type: {db_type}"
         return find_best_db_flavor(vcpus, ram_gb, db_flavors)
+    elif resource_lower == 'oss':
+        return None, "N/A - OSS uses storage class pricing"
     else:
         return None, "Unknown Resource Type"
 
