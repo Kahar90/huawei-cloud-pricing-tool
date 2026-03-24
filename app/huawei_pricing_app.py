@@ -23,10 +23,10 @@ def create_standard_template() -> pd.DataFrame:
         'vCPUs': [2, 4, 4, 8, 2],
         'RAM (GB)': [8, 16, 16, 32, 8],
         'Storage (GB)': [100, 200, 500, 400, 100],
-        'Storage Type': ['SSD', 'HighIO', 'UltraHighIO', 'SSD', 'HighIO'],
+        'Storage Type': ['SSD', 'HighIO', 'UltraHighIO', 'GeneralSSDv2', 'HighIO'],
         'Region': [DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION],
         'Quantity': [1, 2, 1, 3, 1],
-        'Desired Tier': ['general', 'compute', '', 'memory', ''],
+        'Desired Tier': ['general-computing-plus', 'general-computing-plus', '', 'memory-optimized', ''],
         'DB Type': ['', '', 'mysql', '', 'postgresql'],
         'Deployment': ['', '', 'single', '', 'ha']
     }
@@ -45,11 +45,14 @@ def validate_dataframe(df: pd.DataFrame) -> Tuple[bool, str]:
                     df[col] = pd.to_numeric(df[col], errors='coerce')
                 except:
                     return False, f"Column '{col}' contains invalid numeric values"
-    valid_storage_types = ['SSD', 'HighIO', 'UltraHighIO']
+    valid_storage_types = ['SSD', 'HighIO', 'UltraHighIO', 'GeneralSSDv2', 'ExtremeSSD', 'General Purpose SSD', 'High I/O', 'Ultra-high I/O', 'Extreme SSD']
     if 'Storage Type' in df_cols:
         for stype in df['Storage Type'].unique():
-            if str(stype).strip() not in valid_storage_types:
-                return False, f"Invalid Storage Type: '{stype}'. Valid values: {', '.join(valid_storage_types)}"
+            stype_clean = str(stype).strip()
+            stype_lower = stype_clean.lower().replace('-', '').replace(' ', '').replace('_', '')
+            valid_lower = [s.lower().replace('-', '').replace(' ', '').replace('_', '') for s in valid_storage_types]
+            if stype_lower not in valid_lower:
+                st.error(f"Warning: Unknown Storage Type '{stype}'. Valid types: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD")
     valid_resource_types = ['ECS', 'Database']
     if 'Resource Type' in df_cols:
         for rtype in df['Resource Type'].unique():
@@ -214,13 +217,13 @@ def main():
         st.markdown("- **vCPUs**: Number of virtual CPUs")
         st.markdown("- **RAM (GB)**: Memory in gigabytes")
         st.markdown("- **Storage (GB)**: Storage size in gigabytes")
-        st.markdown("- **Storage Type**: SSD, HighIO, or UltraHighIO")
+        st.markdown("- **Storage Type**: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD")
         st.markdown("- **Quantity**: Number of instances (default: 1)")
         st.markdown("---")
         st.markdown("### Optional Columns:")
-        st.markdown("- **Desired Tier** *(ECS only)*: general, compute, or memory")
+        st.markdown("- **Desired Tier** *(ECS only)*: general-computing-plus, general-computing-basic, memory-optimized, disk-intensive, large-memory")
         st.markdown("- **DB Type** *(Database only)*: mysql, postgresql")
-        st.markdown("- **Deployment** *(Database only)*: single orha")
+        st.markdown("- **Deployment** *(Database only)*: single or ha")
 
 if __name__ == "__main__":
     main()

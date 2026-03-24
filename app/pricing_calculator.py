@@ -55,7 +55,23 @@ def get_storage_cost(
     storage_data: Dict
 ) -> float:
     types = storage_data.get('types', [])
-    storage_info = next((t for t in types if t['name'].lower() == storage_type.lower()), None)
+    storage_lower = storage_type.lower().replace('-', '').replace(' ', '').replace('_', '')
+    type_mappings = {
+        'ssd': 'SSD',
+        'generalssd': 'SSD',
+        'generalpurposessd': 'SSD',
+        'generalssdv2': 'GeneralSSDv2',
+        'highio': 'HighIO',
+        'highi/o': 'HighIO',
+        'ultrahighio': 'UltraHighIO',
+        'ultra-highio': 'UltraHighIO',
+        'extremessd': 'ExtremeSSD',
+        'extreme': 'ExtremeSSD',
+    }
+    normalized_name = type_mappings.get(storage_lower, storage_type)
+    storage_info = next((t for t in types if t['name'].lower() == normalized_name.lower()), None)
+    if not storage_info:
+        storage_info = next((t for t in types if t['name'].lower() == storage_lower), None)
     if not storage_info:
         return 0
     return storage_gb * storage_info.get('price_per_gb', 0)

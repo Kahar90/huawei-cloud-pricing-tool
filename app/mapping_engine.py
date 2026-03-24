@@ -51,15 +51,27 @@ def find_best_ecs_flavor(
         candidates = flavors
     exact_matches = [f for f in candidates if f['vcpus'] == vcpus and f['ram_gb'] >= ram_gb]
     if exact_matches:
-        exact_matches.sort(key=lambda x: (x['vcpus'], x['ram_gb']))
+        exact_matches.sort(key=lambda x: (
+            0 if x.get('cpu_type', 'Intel') == 'AMD' else 1,
+            x['vcpus'],
+            x['ram_gb']
+        ))
         return exact_matches[0], "Matched"
     larger_vcpu_matches = [f for f in candidates if f['vcpus'] > vcpus and f['ram_gb'] >= ram_gb]
     if larger_vcpu_matches:
-        larger_vcpu_matches.sort(key=lambda x: (x['vcpus'], x['ram_gb']))
+        larger_vcpu_matches.sort(key=lambda x: (
+            0 if x.get('cpu_type', 'Intel') == 'AMD' else 1,
+            x['vcpus'],
+            x['ram_gb']
+        ))
         return larger_vcpu_matches[0], "Upgraded"
     ram_matches = [f for f in candidates if f['ram_gb'] >= ram_gb]
     if ram_matches:
-        ram_matches.sort(key=lambda x: (x['vcpus'], x['ram_gb']))
+        ram_matches.sort(key=lambda x: (
+            0 if x.get('cpu_type', 'Intel') == 'AMD' else 1,
+            x['vcpus'],
+            x['ram_gb']
+        ))
         return ram_matches[0], "Needs Review - Partial Match"
     return None, "Needs Review"
 
