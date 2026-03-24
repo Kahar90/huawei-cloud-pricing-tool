@@ -22,6 +22,26 @@ def load_storage_pricing() -> Dict:
         return json.load(f)
 
 
+def load_oss_pricing() -> Dict:
+    with open(get_data_path('oss_pricing.json'), 'r') as f:
+        return json.load(f)
+
+
+def get_oss_storage_classes(oss_data: Dict) -> List[Dict]:
+    return oss_data.get('storage_classes', [])
+
+
+def get_oss_class_names(oss_data: Dict) -> List[str]:
+    validations = oss_data.get('validations', {})
+    return validations.get('storage_classes', [])
+
+
+def get_available_az_types(oss_data: Dict) -> List[str]:
+    validations = oss_data.get('validations', {})
+    return validations.get('availability_zones', ['single-az', 'multi-az'])
+
+
+
 def get_region(ecs_data: Dict) -> str:
     return ecs_data.get('region', 'ap-southeast-3')
 
@@ -45,21 +65,37 @@ def find_best_ecs_flavor(
     flavors: List[Dict]
 ) -> Tuple[Optional[Dict], str]:
     candidates = flavors
-    if desired_tier and desired_tier.lower() not in ['any', '', 'none']:
-        candidates = [f for f in flavors if f.get('family', '').lower() == desired_tier.lower()]
+    if desired_tier is not None and isinstance(desired_tier, float):
+        desired_tier = None
+    tier_str = str(desired_tier).strip() if desired_tier else ''
+    if tier_str and tier_str.lower() not in ['any', '', 'none']:
+        tier_lower = tier_str.lower()
+        candidates = [f for f in flavors if f.get('family', '').lower() == tier_lower]
     if not candidates:
         candidates = flavors
     exact_matches = [f for f in candidates if f['vcpus'] == vcpus and f['ram_gb'] >= ram_gb]
     if exact_matches:
-        exact_matches.sort(key=lambda x: (x['vcpus'], x['ram_gb']))
+        exact_matches.sort(key=lambda x: (
+            0 if x.get('cpu_type', 'Intel') == 'AMD' else 1,
+            x['vcpus'],
+            x['ram_gb']
+        ))
         return exact_matches[0], "Matched"
     larger_vcpu_matches = [f for f in candidates if f['vcpus'] > vcpus and f['ram_gb'] >= ram_gb]
     if larger_vcpu_matches:
-        larger_vcpu_matches.sort(key=lambda x: (x['vcpus'], x['ram_gb']))
+        larger_vcpu_matches.sort(key=lambda x: (
+            0 if x.get('cpu_type', 'Intel') == 'AMD' else 1,
+            x['vcpus'],
+            x['ram_gb']
+        ))
         return larger_vcpu_matches[0], "Upgraded"
     ram_matches = [f for f in candidates if f['ram_gb'] >= ram_gb]
     if ram_matches:
-        ram_matches.sort(key=lambda x: (x['vcpus'], x['ram_gb']))
+        ram_matches.sort(key=lambda x: (
+            0 if x.get('cpu_type', 'Intel') == 'AMD' else 1,
+            x['vcpus'],
+            x['ram_gb']
+        ))
         return ram_matches[0], "Needs Review - Partial Match"
     return None, "Needs Review"
 
@@ -93,15 +129,18 @@ def map_resource(
     ecs_flavors: List[Dict],
     db_data: Dict
 ) -> Tuple[Optional[Dict], str]:
-    if resource_type.lower() == 'ecs':
+    resource_lower = str(resource_type).lower() if resource_type else ''
+    if resource_lower == 'ecs':
         return find_best_ecs_flavor(vcpus, ram_gb, desired_tier, ecs_flavors)
-    elif resource_type.lower() == 'database':
+    elif resource_lower == 'database':
         if not db_type:
             db_type = 'mysql'
         db_flavors = get_db_flavors(db_data, db_type)
         if not db_flavors:
             return None, f"Unknown DB Type: {db_type}"
         return find_best_db_flavor(vcpus, ram_gb, db_flavors)
+    elif resource_lower == 'oss':
+        return None, "N/A - OSS uses storage class pricing"
     else:
         return None, "Unknown Resource Type"
 

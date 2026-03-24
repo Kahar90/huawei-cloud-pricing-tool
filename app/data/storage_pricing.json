@@ -1,9 +1,47 @@
 {
   "region": "ap-southeast-3",
   "region_name": "AP-Jakarta",
+  "source": "EVS ap jakarta.xlsx",
   "types": [
-    {"name": "SSD", "price_per_gb": 0.10},
-    {"name": "HighIO", "price_per_gb": 0.15},
-    {"name": "UltraHighIO", "price_per_gb": 0.20}
+    {
+      "name": "GeneralSSDv2",
+      "display_name": "General Purpose SSD V2",
+      "price_per_gb": 0.091,
+      "hourly_per_gb": 0.000125,
+      "monthly_per_gb": 0.091,
+      "yearly_per_gb": 0.91
+    },
+    {
+      "name": "HighIO",
+      "display_name": "High I/O",
+      "price_per_gb": 0.051,
+      "hourly_per_gb": 7e-05,
+      "monthly_per_gb": 0.051,
+      "yearly_per_gb": 0.51
+    },
+    {
+      "name": "UltraHighIO",
+      "display_name": "Ultra-high I/O",
+      "price_per_gb": 0.214,
+      "hourly_per_gb": 0.000294,
+      "monthly_per_gb": 0.214,
+      "yearly_per_gb": 2.14
+    },
+    {
+      "name": "SSD",
+      "display_name": "General Purpose SSD",
+      "price_per_gb": 0.114,
+      "hourly_per_gb": 0.000157,
+      "monthly_per_gb": 0.114,
+      "yearly_per_gb": 1.14
+    },
+    {
+      "name": "ExtremeSSD",
+      "display_name": "Extreme SSD",
+      "price_per_gb": 0.448,
+      "hourly_per_gb": 0.000614,
+      "monthly_per_gb": 0.448,
+      "yearly_per_gb": 4.48
+    }
   ]
 }
