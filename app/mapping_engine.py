@@ -1,4 +1,5 @@
 import json
+import pandas as pd
 import os
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -156,8 +157,15 @@ def map_resources(
     ecs_flavors = get_ecs_flavors(ecs_data)
     for _, row in df.iterrows():
         resource_type = str(row.get('Resource Type', 'ECS')).strip()
-        vcpus = int(row.get('vCPUs', 0) or 0)
-        ram_gb = int(row.get('RAM (GB)', 0) or 0)
+        # Handle vCPUs and RAM - OSS resources don't have these
+        if resource_type.lower() == 'oss':
+            vcpus = 0
+            ram_gb = 0
+        else:
+            vcpus_val = row.get('vCPUs', 0)
+            ram_val = row.get('RAM (GB)', 0)
+            vcpus = int(vcpus_val) if pd.notna(vcpus_val) else 0
+            ram_gb = int(ram_val) if pd.notna(ram_val) else 0
         desired_tier = row.get('Desired Tier')
         if desired_tier is not None and str(desired_tier).strip() == '':
             desired_tier = None
