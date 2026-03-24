@@ -45,8 +45,12 @@ def find_best_ecs_flavor(
     flavors: List[Dict]
 ) -> Tuple[Optional[Dict], str]:
     candidates = flavors
-    if desired_tier and desired_tier.lower() not in ['any', '', 'none']:
-        candidates = [f for f in flavors if f.get('family', '').lower() == desired_tier.lower()]
+    if desired_tier is not None and isinstance(desired_tier, float):
+        desired_tier = None
+    tier_str = str(desired_tier).strip() if desired_tier else ''
+    if tier_str and tier_str.lower() not in ['any', '', 'none']:
+        tier_lower = tier_str.lower()
+        candidates = [f for f in flavors if f.get('family', '').lower() == tier_lower]
     if not candidates:
         candidates = flavors
     exact_matches = [f for f in candidates if f['vcpus'] == vcpus and f['ram_gb'] >= ram_gb]
@@ -105,9 +109,10 @@ def map_resource(
     ecs_flavors: List[Dict],
     db_data: Dict
 ) -> Tuple[Optional[Dict], str]:
-    if resource_type.lower() == 'ecs':
+    resource_lower = str(resource_type).lower() if resource_type else ''
+    if resource_lower == 'ecs':
         return find_best_ecs_flavor(vcpus, ram_gb, desired_tier, ecs_flavors)
-    elif resource_type.lower() == 'database':
+    elif resource_lower == 'database':
         if not db_type:
             db_type = 'mysql'
         db_flavors = get_db_flavors(db_data, db_type)
