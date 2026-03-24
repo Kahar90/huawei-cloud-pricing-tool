@@ -1,80 +1,471 @@
 {
   "region": "ap-southeast-3",
   "region_name": "AP-Jakarta",
+  "source": "rds ap jakarta.xlsx",
   "databases": {
     "mysql": [
       {
-        "name": "rds.mysql.c6.large.4",
+        "name": "mysql.general.2vCPU.4GB",
+        "vcpus": 2,
+        "ram_gb": 4,
+        "pricing": {
+          "ha": {
+            "hourly": 0.208,
+            "monthly": 134.0,
+            "yearly": 1340.0
+          },
+          "single": {
+            "hourly": 0.201,
+            "monthly": 106.96,
+            "yearly": 1069.6
+          }
+        }
+      },
+      {
+        "name": "mysql.general.2vCPU.8GB",
         "vcpus": 2,
         "ram_gb": 8,
         "pricing": {
-          "single": {"hourly": 0.06, "monthly": 40.00, "yearly": 432.00},
-          "ha": {"hourly": 0.12, "monthly": 80.00, "yearly": 864.00}
+          "ha": {
+            "hourly": 0.447,
+            "monthly": 237.69,
+            "yearly": 2376.9
+          },
+          "single": {
+            "hourly": 0.223,
+            "monthly": 118.85,
+            "yearly": 1188.5
+          }
         }
       },
       {
-        "name": "rds.mysql.c6.xlarge.4",
+        "name": "mysql.general.2vCPU.16GB",
+        "vcpus": 2,
+        "ram_gb": 16,
+        "pricing": {
+          "single": {
+            "hourly": 0.271,
+            "monthly": 151.05,
+            "yearly": 1510.5
+          }
+        }
+      },
+      {
+        "name": "mysql.general.4vCPU.8GB",
+        "vcpus": 4,
+        "ram_gb": 8,
+        "pricing": {
+          "ha": {
+            "hourly": 0.711,
+            "monthly": 385.06,
+            "yearly": 3850.6
+          },
+          "single": {
+            "hourly": 0.402,
+            "monthly": 213.92,
+            "yearly": 2139.2
+          }
+        }
+      },
+      {
+        "name": "mysql.general.4vCPU.16GB",
         "vcpus": 4,
         "ram_gb": 16,
         "pricing": {
-          "single": {"hourly": 0.12, "monthly": 80.00, "yearly": 864.00},
-          "ha": {"hourly": 0.24, "monthly": 160.00, "yearly": 1728.00}
+          "ha": {
+            "hourly": 0.893,
+            "monthly": 475.38,
+            "yearly": 4753.8
+          },
+          "single": {
+            "hourly": 0.447,
+            "monthly": 237.69,
+            "yearly": 2376.9
+          }
         }
       },
       {
-        "name": "rds.mysql.c6.2xlarge.4",
+        "name": "mysql.general.4vCPU.32GB",
+        "vcpus": 4,
+        "ram_gb": 32,
+        "pricing": {
+          "single": {
+            "hourly": 0.542,
+            "monthly": 302.2,
+            "yearly": 3022.0
+          }
+        }
+      },
+      {
+        "name": "mysql.general.8vCPU.16GB",
+        "vcpus": 8,
+        "ram_gb": 16,
+        "pricing": {
+          "ha": {
+            "hourly": 1.422,
+            "monthly": 769.96,
+            "yearly": 7699.6
+          },
+          "single": {
+            "hourly": 0.804,
+            "monthly": 427.76,
+            "yearly": 4277.6
+          }
+        }
+      },
+      {
+        "name": "mysql.general.8vCPU.32GB",
         "vcpus": 8,
         "ram_gb": 32,
         "pricing": {
-          "single": {"hourly": 0.24, "monthly": 160.00, "yearly": 1728.00},
-          "ha": {"hourly": 0.48, "monthly": 320.00, "yearly": 3456.00}
+          "ha": {
+            "hourly": 1.786,
+            "monthly": 950.57,
+            "yearly": 9505.7
+          },
+          "single": {
+            "hourly": 0.893,
+            "monthly": 475.29,
+            "yearly": 4752.9
+          }
         }
       },
       {
-        "name": "rds.mysql.c6.4xlarge.4",
+        "name": "mysql.general.8vCPU.64GB",
+        "vcpus": 8,
+        "ram_gb": 64,
+        "pricing": {
+          "single": {
+            "hourly": 1.083,
+            "monthly": 604.3,
+            "yearly": 6043.0
+          }
+        }
+      },
+      {
+        "name": "mysql.general.16vCPU.32GB",
+        "vcpus": 16,
+        "ram_gb": 32,
+        "pricing": {
+          "single": {
+            "hourly": 1.607,
+            "monthly": 855.51,
+            "yearly": 8555.1
+          }
+        }
+      },
+      {
+        "name": "mysql.general.16vCPU.64GB",
         "vcpus": 16,
         "ram_gb": 64,
         "pricing": {
-          "single": {"hourly": 0.48, "monthly": 320.00, "yearly": 3456.00},
-          "ha": {"hourly": 0.96, "monthly": 640.00, "yearly": 6912.00}
+          "ha": {
+            "hourly": 3.572,
+            "monthly": 1901.14,
+            "yearly": 19011.4
+          }
+        }
+      },
+      {
+        "name": "mysql.general.32vCPU.128GB",
+        "vcpus": 32,
+        "ram_gb": 128,
+        "pricing": {
+          "ha": {
+            "hourly": 7.144,
+            "monthly": 3803.04,
+            "yearly": 38030.4
+          }
+        }
+      },
+      {
+        "name": "mysql.general.64vCPU.256GB",
+        "vcpus": 64,
+        "ram_gb": 256,
+        "pricing": {
+          "ha": {
+            "hourly": 14.288,
+            "monthly": 7606.08,
+            "yearly": 76060.8
+          }
         }
       }
     ],
     "postgresql": [
       {
-        "name": "rds.pg.c6.large.4",
+        "name": "postgresql.general.2vCPU.4GB",
+        "vcpus": 2,
+        "ram_gb": 4,
+        "pricing": {
+          "ha": {
+            "hourly": 0.4221,
+            "monthly": 224.78,
+            "yearly": 2247.8
+          },
+          "single": {
+            "hourly": 0.211,
+            "monthly": 112.44,
+            "yearly": 1124.4
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.2vCPU.8GB",
         "vcpus": 2,
         "ram_gb": 8,
         "pricing": {
-          "single": {"hourly": 0.065, "monthly": 45.00, "yearly": 486.00},
-          "ha": {"hourly": 0.13, "monthly": 90.00, "yearly": 972.00}
+          "ha": {
+            "hourly": 0.469,
+            "monthly": 249.75,
+            "yearly": 2497.55
+          },
+          "single": {
+            "hourly": 0.235,
+            "monthly": 124.93,
+            "yearly": 1249.3
+          }
         }
       },
       {
-        "name": "rds.pg.c6.xlarge.4",
+        "name": "postgresql.general.2vCPU.16GB",
+        "vcpus": 2,
+        "ram_gb": 16,
+        "pricing": {
+          "single": {
+            "hourly": 0.285,
+            "monthly": 159.03,
+            "yearly": 1590.3
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.4vCPU.8GB",
+        "vcpus": 4,
+        "ram_gb": 8,
+        "pricing": {
+          "ha": {
+            "hourly": 0.8451,
+            "monthly": 449.64,
+            "yearly": 4496.44
+          },
+          "single": {
+            "hourly": 0.422,
+            "monthly": 224.78,
+            "yearly": 2247.8
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.4vCPU.16GB",
         "vcpus": 4,
         "ram_gb": 16,
         "pricing": {
-          "single": {"hourly": 0.13, "monthly": 90.00, "yearly": 972.00},
-          "ha": {"hourly": 0.26, "monthly": 180.00, "yearly": 1944.00}
+          "ha": {
+            "hourly": 0.939,
+            "monthly": 499.61,
+            "yearly": 4996.05
+          },
+          "single": {
+            "hourly": 0.469,
+            "monthly": 249.76,
+            "yearly": 2497.6
+          }
         }
       },
       {
-        "name": "rds.pg.c6.2xlarge.4",
+        "name": "postgresql.general.4vCPU.32GB",
+        "vcpus": 4,
+        "ram_gb": 32,
+        "pricing": {
+          "single": {
+            "hourly": 0.57,
+            "monthly": 318.06,
+            "yearly": 3180.6
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.8vCPU.16GB",
+        "vcpus": 8,
+        "ram_gb": 16,
+        "pricing": {
+          "ha": {
+            "hourly": 1.6893,
+            "monthly": 899.2,
+            "yearly": 8992.03
+          },
+          "single": {
+            "hourly": 0.845,
+            "monthly": 449.65,
+            "yearly": 4496.5
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.8vCPU.32GB",
         "vcpus": 8,
         "ram_gb": 32,
         "pricing": {
-          "single": {"hourly": 0.26, "monthly": 180.00, "yearly": 1944.00},
-          "ha": {"hourly": 0.52, "monthly": 360.00, "yearly": 3888.00}
+          "ha": {
+            "hourly": 1.877,
+            "monthly": 999.12,
+            "yearly": 9991.15
+          },
+          "single": {
+            "hourly": 0.939,
+            "monthly": 499.61,
+            "yearly": 4996.1
+          }
         }
       },
       {
-        "name": "rds.pg.c6.4xlarge.4",
+        "name": "postgresql.general.8vCPU.64GB",
+        "vcpus": 8,
+        "ram_gb": 64,
+        "pricing": {
+          "single": {
+            "hourly": 1.14,
+            "monthly": 636.12,
+            "yearly": 6361.2
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.16vCPU.32GB",
+        "vcpus": 16,
+        "ram_gb": 32,
+        "pricing": {
+          "ha": {
+            "hourly": 3.3786,
+            "monthly": 1798.49,
+            "yearly": 17984.92
+          },
+          "single": {
+            "hourly": 1.689,
+            "monthly": 899.21,
+            "yearly": 8992.1
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.16vCPU.64GB",
         "vcpus": 16,
         "ram_gb": 64,
         "pricing": {
-          "single": {"hourly": 0.52, "monthly": 360.00, "yearly": 3888.00},
-          "ha": {"hourly": 1.04, "monthly": 720.00, "yearly": 7776.00}
+          "ha": {
+            "hourly": 3.754,
+            "monthly": 1998.33,
+            "yearly": 19983.25
+          },
+          "single": {
+            "hourly": 1.877,
+            "monthly": 999.12,
+            "yearly": 9991.2
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.16vCPU.128GB",
+        "vcpus": 16,
+        "ram_gb": 128,
+        "pricing": {
+          "single": {
+            "hourly": 2.28,
+            "monthly": 1272.24,
+            "yearly": 12722.4
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.32vCPU.64GB",
+        "vcpus": 32,
+        "ram_gb": 64,
+        "pricing": {
+          "ha": {
+            "hourly": 6.7581,
+            "monthly": 3596.99,
+            "yearly": 35969.85
+          },
+          "single": {
+            "hourly": 3.379,
+            "monthly": 1798.41,
+            "yearly": 17984.1
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.32vCPU.128GB",
+        "vcpus": 32,
+        "ram_gb": 128,
+        "pricing": {
+          "ha": {
+            "hourly": 7.509,
+            "monthly": 3996.65,
+            "yearly": 39966.5
+          },
+          "single": {
+            "hourly": 3.754,
+            "monthly": 1998.23,
+            "yearly": 19982.3
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.32vCPU.256GB",
+        "vcpus": 32,
+        "ram_gb": 256,
+        "pricing": {
+          "single": {
+            "hourly": 4.56,
+            "monthly": 2544.58,
+            "yearly": 25445.8
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.64vCPU.128GB",
+        "vcpus": 64,
+        "ram_gb": 128,
+        "pricing": {
+          "ha": {
+            "hourly": 13.5162,
+            "monthly": 7193.97,
+            "yearly": 71939.7
+          },
+          "single": {
+            "hourly": 6.758,
+            "monthly": 3596.81,
+            "yearly": 35968.1
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.64vCPU.256GB",
+        "vcpus": 64,
+        "ram_gb": 256,
+        "pricing": {
+          "ha": {
+            "hourly": 15.018,
+            "monthly": 7993.3,
+            "yearly": 79933.0
+          },
+          "single": {
+            "hourly": 7.509,
+            "monthly": 3996.46,
+            "yearly": 39964.6
+          }
+        }
+      },
+      {
+        "name": "postgresql.general.64vCPU.512GB",
+        "vcpus": 64,
+        "ram_gb": 512,
+        "pricing": {
+          "single": {
+            "hourly": 9.12,
+            "monthly": 5089.06,
+            "yearly": 50890.6
+          }
         }
       }
     ]
