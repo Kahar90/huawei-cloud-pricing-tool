@@ -60,14 +60,28 @@ def validate_dataframe(df: pd.DataFrame) -> Tuple[bool, str]:
         if col in df_cols:
             df[col] = df[col].astype(str)
     
-    valid_storage_types = ['SSD', 'HighIO', 'UltraHighIO', 'GeneralSSDv2', 'ExtremeSSD', 'General Purpose SSD', 'High I/O', 'Ultra-high I/O', 'Extreme SSD']
-    if 'Storage Type' in df_cols:
-        for stype in df['Storage Type'].unique():
-            stype_str = str(stype).strip()
-            stype_lower = stype_str.lower().replace('-', '').replace(' ', '').replace('_', '')
-            valid_lower = [s.lower().replace('-', '').replace(' ', '').replace('_', '') for s in valid_storage_types]
-            if stype_lower not in valid_lower:
-                st.warning(f"Unknown Storage Type '{stype_str}'. Will try to match. Valid types: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD")
+    # Storage type validation depends on resource type
+    block_storage_types = ['SSD', 'HighIO', 'UltraHighIO', 'GeneralSSDv2', 'ExtremeSSD', 'General Purpose SSD', 'High I/O', 'Ultra-high I/O', 'Extreme SSD']
+    oss_storage_classes = ['Standard', 'InfrequentAccess', 'Archive', 'DeepArchive']
+    
+    if 'Storage Type' in df_cols and 'Resource Type' in df_cols:
+        for _, row in df.iterrows():
+            resource_type = str(row.get('Resource Type', '')).strip().lower()
+            stype = str(row.get('Storage Type', '')).strip()
+            if not stype or stype == 'nan':
+                continue
+            stype_lower = stype.lower().replace('-', '').replace(' ', '').replace('_', '')
+            
+            if resource_type == 'oss':
+                # OSS uses storage classes
+                valid_oss_lower = [s.lower().replace('-', '').replace(' ', '').replace('_', '') for s in oss_storage_classes]
+                if stype_lower not in valid_oss_lower:
+                    st.warning(f"Unknown OSS Storage Class '{stype}'. Valid classes: Standard, InfrequentAccess, Archive, DeepArchive")
+            else:
+                # ECS/Database uses block storage types
+                valid_block_lower = [s.lower().replace('-', '').replace(' ', '').replace('_', '') for s in block_storage_types]
+                if stype_lower not in valid_block_lower:
+                    st.warning(f"Unknown Storage Type '{stype}'. Valid types: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD")
     
     valid_resource_types = ['ECS', 'Database', 'OSS']
     if 'Resource Type' in df_cols:

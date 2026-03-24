@@ -211,8 +211,14 @@ def calculate_all_costs(
     for idx, row in df.iterrows():
         mapping = mapping_results[idx]
         resource_type = str(row.get('Resource Type', 'ECS')).strip()
-        vcpus = int(row.get('vCPUs', 0) or 0)
-        ram_gb = int(row.get('RAM (GB)', 0) or 0)
+        
+        # Handle vCPUs and RAM - OSS resources don't have these
+        if resource_type.lower() == 'oss':
+            vcpus = 0
+            ram_gb = 0
+        else:
+            vcpus = int(row.get('vCPUs', 0) or 0) if pd.notna(row.get('vCPUs')) else 0
+            ram_gb = int(row.get('RAM (GB)', 0) or 0) if pd.notna(row.get('RAM (GB)')) else 0
         storage_gb = int(row.get('Storage (GB)', 0) or 0)
         storage_type = str(row.get('Storage Type', 'SSD')).strip()
         region = default_region
@@ -230,12 +236,21 @@ def calculate_all_costs(
             # Handle OSS resources
             oss_storage_class = str(row.get('Storage Type', 'Standard')).strip()
             availability_zone = str(row.get('Availability Zone', 'single-az')).strip()
-            requests_read = int(row.get('Requests Read', 0) or 0)
-            requests_write = int(row.get('Requests Write', 0) or 0)
-            requests_delete = int(row.get('Requests Delete', 0) or 0)
-            data_retrieval_gb = float(row.get('Data Retrieval GB', 0) or 0)
-            retrieval_type = str(row.get('Retrieval Type', '')).strip()
-            internet_outbound_gb = float(row.get('Internet Outbound GB', 0) or 0)
+            
+            # Handle potential NaN values safely
+            requests_read_val = row.get('Requests Read', 0)
+            requests_write_val = row.get('Requests Write', 0)
+            requests_delete_val = row.get('Requests Delete', 0)
+            data_retrieval_val = row.get('Data Retrieval GB', 0)
+            internet_outbound_val = row.get('Internet Outbound GB', 0)
+            retrieval_type_val = row.get('Retrieval Type', '')
+            
+            requests_read = int(requests_read_val) if pd.notna(requests_read_val) and str(requests_read_val) != 'nan' else 0
+            requests_write = int(requests_write_val) if pd.notna(requests_write_val) and str(requests_write_val) != 'nan' else 0
+            requests_delete = int(requests_delete_val) if pd.notna(requests_delete_val) and str(requests_delete_val) != 'nan' else 0
+            data_retrieval_gb = float(data_retrieval_val) if pd.notna(data_retrieval_val) and str(data_retrieval_val) != 'nan' else 0.0
+            internet_outbound_gb = float(internet_outbound_val) if pd.notna(internet_outbound_val) and str(internet_outbound_val) != 'nan' else 0.0
+            retrieval_type = str(retrieval_type_val).strip() if pd.notna(retrieval_type_val) and str(retrieval_type_val) != 'nan' else ''
             
             oss_costs = get_oss_cost(
                 storage_gb, oss_storage_class, availability_zone,
