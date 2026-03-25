@@ -506,37 +506,45 @@ def main():
                             st.session_state.show_transformed = False
                             st.rerun()
 
-                    # Display opportunities with checkboxes
                     st.markdown("**Select optimizations to apply:**")
 
-                    for idx, opp in enumerate(savings_summary['opportunities']):
-                        # Create a unique key for each checkbox
-                        checkbox_key = f"opt_checkbox_{idx}"
+                    # Create multiselect widget for efficient selection
+                    opportunity_options = [
+                        f"Row {opp['row_index'] + 1}: {opp['current_flavor']} → {opp['recommended_flavor']} (${opp['monthly_savings']:,.2f}/mo)"
+                        for idx, opp in enumerate(savings_summary['opportunities'])
+                    ]
 
-                        # Determine if this optimization is selected
-                        is_selected = idx in st.session_state.selected_optimizations
+                    # Map from display string to index
+                    option_to_idx = {opt: idx for idx, opt in enumerate(opportunity_options)}
 
-                        # Create columns for checkbox and details
-                        cb_col, detail_col = st.columns([0.1, 0.9])
+                    # Get current selection as display strings
+                    current_selection = [
+                        opportunity_options[idx]
+                        for idx in st.session_state.selected_optimizations
+                        if idx < len(opportunity_options)
+                    ]
 
-                        with cb_col:
-                            # Use the checkbox with the current state
-                            new_state = st.checkbox(
-                                "",
-                                value=is_selected,
-                                key=checkbox_key,
-                                label_visibility="collapsed"
-                            )
+                    # Use multiselect for efficient selection without loop issues
+                    selected_options = st.multiselect(
+                        "Choose optimizations to apply:",
+                        options=opportunity_options,
+                        default=current_selection,
+                        key="optimization_multiselect"
+                    )
 
-                            # Update session state based on checkbox
-                            if new_state and idx not in st.session_state.selected_optimizations:
-                                st.session_state.selected_optimizations.add(idx)
-                            elif not new_state and idx in st.session_state.selected_optimizations:
-                                st.session_state.selected_optimizations.discard(idx)
+                    # Update session state from selection
+                    st.session_state.selected_optimizations = {
+                        option_to_idx[opt] for opt in selected_options
+                        if opt in option_to_idx
+                    }
 
-                        with detail_col:
+                    # Show details of each opportunity
+                    with st.expander("📋 View All Optimization Details", expanded=False):
+                        for idx, opp in enumerate(savings_summary['opportunities']):
+                            is_selected = idx in st.session_state.selected_optimizations
+                            status_icon = "☑️" if is_selected else "⬜"
                             st.markdown(
-                                f"**{opp['resource_type']}**: {opp['current_flavor']} → "
+                                f"{status_icon} **{opp['resource_type']}**: {opp['current_flavor']} → "
                                 f"**{opp['recommended_flavor']}** | "
                                 f"Save **${opp['monthly_savings']:,.2f}/mo** ({opp['savings_percent']:.1f}%) | "
                                 f"Specs: {opp['alternative_specs']}"
