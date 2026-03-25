@@ -487,54 +487,51 @@ def main():
                     st.markdown("#### 🎯 Selective Optimization")
                     st.caption("Select which optimizations to apply:")
 
-                    # Bulk action buttons
-                    bulk_col1, bulk_col2, bulk_col3 = st.columns(3)
-                    with bulk_col1:
-                        if st.button("☑️ Select All", key="select_all"):
-                            st.session_state.selected_optimizations = set(
-                                range(len(savings_summary['opportunities']))
-                            )
-                            st.rerun()
-                    with bulk_col2:
-                        if st.button("⬜ Select None", key="select_none"):
-                            st.session_state.selected_optimizations = set()
-                            st.rerun()
-                    with bulk_col3:
-                        if st.button("🔄 Reset", key="reset_selection"):
-                            st.session_state.selected_optimizations = set()
-                            st.session_state.applied_optimizations = None
-                            st.session_state.show_transformed = False
-                            st.rerun()
-
                     st.markdown("**Select optimizations to apply:**")
-                    st.info("Enter row numbers separated by commas (e.g., '1, 3, 5') or 'all' for all optimizations")
                     
-                    selection_input = st.text_input(
-                        "Row numbers to optimize:",
-                        value=st.session_state.get('optimization_input', ''),
-                        key="optimization_input",
-                        placeholder="1, 2, 3 or 'all'"
-                    )
+                    # Display opportunities as a table with checkboxes
+                    st.markdown("| Select | Row | Resource | Current | New | Monthly Savings |")
+                    st.markdown("|--------|-----|----------|---------|-----|-----------------|")
                     
-                    input_str = str(selection_input) if selection_input is not None else ""
+                    checkbox_keys = []
+                    for idx, opp in enumerate(savings_summary['opportunities']):
+                        key = f"opt_cb_{idx}"
+                        checkbox_keys.append(key)
+                        # Just display the checkbox - don't track state during render
+                        checked = st.checkbox(
+                            f"Row {idx+1}: {opp['resource_type']} {opp['current_flavor']} → {opp['recommended_flavor']} (${opp['monthly_savings']:,.2f}/mo)",
+                            key=key,
+                            value=False
+                        )
                     
-                    if st.button("🚀 Apply Selected Optimizations", type="primary"):
-                        if input_str.lower().strip() == 'all':
-                            st.session_state.applied_optimizations = set(range(len(savings_summary['opportunities'])))
-                            st.session_state.show_transformed = True
-                        elif input_str.strip():
-                            try:
-                                selected_rows = [int(x.strip()) for x in input_str.split(',') if x.strip()]
-                                selected_indices = {row - 1 for row in selected_rows if 1 <= row <= len(savings_summary['opportunities'])}
-                                if selected_indices:
-                                    st.session_state.applied_optimizations = selected_indices
-                                    st.session_state.show_transformed = True
-                                else:
-                                    st.warning("No valid row numbers entered")
-                            except ValueError:
-                                st.error("Please enter valid numbers separated by commas")
-                        else:
-                            st.warning("Please enter row numbers or 'all'")
+                    # Action buttons in columns
+                    btn_col1, btn_col2, btn_col3 = st.columns(3)
+                    
+                    with btn_col1:
+                        if st.button("☑️ Select All", key="select_all_btn"):
+                            for key in checkbox_keys:
+                                st.session_state[key] = True
+                            st.session_state.select_all_triggered = True
+                    
+                    with btn_col2:
+                        if st.button("⬜ Clear All", key="clear_all_btn"):
+                            for key in checkbox_keys:
+                                st.session_state[key] = False
+                            st.session_state.select_all_triggered = False
+                    
+                    with btn_col3:
+                        if st.button("🚀 Apply Selected", type="primary", key="apply_selected_btn"):
+                            # Collect which checkboxes are checked
+                            selected_indices = {
+                                idx for idx, key in enumerate(checkbox_keys)
+                                if st.session_state.get(key, False)
+                            }
+                            
+                            if selected_indices:
+                                st.session_state.applied_optimizations = selected_indices
+                                st.session_state.show_transformed = True
+                            else:
+                                st.warning("Please select at least one optimization")
 
                     # Show transformed results if applied
                     if st.session_state.show_transformed and st.session_state.applied_optimizations:
