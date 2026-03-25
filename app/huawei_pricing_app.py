@@ -489,35 +489,46 @@ def main():
 
                     st.markdown("**Select optimizations to apply:**")
                     
-                    # Display opportunities as a table with checkboxes
-                    st.markdown("| Select | Row | Resource | Current | New | Monthly Savings |")
-                    st.markdown("|--------|-----|----------|---------|-----|-----------------|")
+                    # Initialize select all state if not exists
+                    if 'select_all_state' not in st.session_state:
+                        st.session_state.select_all_state = None
                     
+                    # Display opportunities as a table with checkboxes
                     checkbox_keys = []
                     for idx, opp in enumerate(savings_summary['opportunities']):
                         key = f"opt_cb_{idx}"
                         checkbox_keys.append(key)
-                        # Just display the checkbox - don't track state during render
-                        checked = st.checkbox(
+                        # Determine default value based on select_all_state
+                        default_value = False
+                        if st.session_state.select_all_state == 'all':
+                            default_value = True
+                        elif st.session_state.select_all_state == 'none':
+                            default_value = False
+                        else:
+                            default_value = st.session_state.get(key, False)
+                        
+                        st.checkbox(
                             f"Row {idx+1}: {opp['resource_type']} {opp['current_flavor']} → {opp['recommended_flavor']} (${opp['monthly_savings']:,.2f}/mo)",
                             key=key,
-                            value=False
+                            value=default_value
                         )
+                    
+                    # Reset select_all_state after rendering checkboxes
+                    if st.session_state.select_all_state in ['all', 'none']:
+                        st.session_state.select_all_state = None
                     
                     # Action buttons in columns
                     btn_col1, btn_col2, btn_col3 = st.columns(3)
                     
                     with btn_col1:
                         if st.button("☑️ Select All", key="select_all_btn"):
-                            for key in checkbox_keys:
-                                st.session_state[key] = True
-                            st.session_state.select_all_triggered = True
+                            st.session_state.select_all_state = 'all'
+                            st.rerun()
                     
                     with btn_col2:
                         if st.button("⬜ Clear All", key="clear_all_btn"):
-                            for key in checkbox_keys:
-                                st.session_state[key] = False
-                            st.session_state.select_all_triggered = False
+                            st.session_state.select_all_state = 'none'
+                            st.rerun()
                     
                     with btn_col3:
                         if st.button("🚀 Apply Selected", type="primary", key="apply_selected_btn"):
