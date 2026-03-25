@@ -611,6 +611,32 @@ def main():
                             comp_df = pd.DataFrame(comparison_data)
                             st.dataframe(comp_df, use_container_width=True)
 
+                        # Side-by-side comparison view
+                        with st.expander("📊 Side-by-Side Comparison"):
+                            st.markdown("**Original vs Optimized (Changed Resources Only)**")
+
+                            for idx in st.session_state.applied_optimizations:
+                                opp = savings_summary['opportunities'][idx]
+                                row_idx = opp['row_index']
+
+                                original_row = result_df.loc[row_idx]
+                                new_row = transformed_df.loc[row_idx]
+
+                                comp_cols = st.columns(2)
+                                with comp_cols[0]:
+                                    st.markdown(f"**BEFORE (Row {row_idx + 1})**")
+                                    st.text(f"Flavor: {original_row['Mapped Flavor']}")
+                                    st.text(f"Cost: ${original_row['Total Cost for Quantity']:,.2f}")
+                                    st.text(f"Specs: {original_row.get('vCPUs', 0)}vCPU/{original_row.get('RAM (GB)', 0)}GB")
+
+                                with comp_cols[1]:
+                                    st.markdown(f"**AFTER** ✅")
+                                    st.text(f"Flavor: {new_row['Mapped Flavor']}")
+                                    st.text(f"Cost: ${new_row['Total Cost for Quantity']:,.2f}")
+                                    st.text(f"Savings: ${opp['monthly_savings']:,.2f}/mo")
+
+                                st.markdown("---")
+
                         # Download button for selective optimization
                         st.markdown("#### 📥 Download Selectively Optimized Quote")
                         sel_output = BytesIO()
@@ -649,6 +675,30 @@ def main():
                     st.metric("Total Instances", summary['total_instances'])
                 with col4:
                     st.metric("Needs Review", summary['needs_review_count'])
+
+                # Cost Breakdown Visualization
+                st.markdown("---")
+                with st.expander("📈 Cost Breakdown Visualization", expanded=True):
+                    viz_col1, viz_col2 = st.columns(2)
+
+                    with viz_col1:
+                        st.markdown("**Cost by Resource Type**")
+                        cost_by_type = result_df.groupby('Resource Type')['Total Cost for Quantity'].sum().reset_index()
+                        st.bar_chart(cost_by_type.set_index('Resource Type'))
+
+                    with viz_col2:
+                        st.markdown("**Instance Count by Type**")
+                        count_by_type = result_df.groupby('Resource Type')['Quantity'].sum().reset_index()
+                        st.bar_chart(count_by_type.set_index('Resource Type'))
+
+                    # Top 10 most expensive resources
+                    st.markdown("**Top 10 Most Expensive Resources**")
+                    top_expensive = result_df.nlargest(10, 'Total Cost for Quantity')[
+                        ['Resource Type', 'Mapped Flavor', 'vCPUs', 'RAM (GB)', 'Total Cost for Quantity']
+                    ]
+                    top_expensive['Total Cost'] = top_expensive['Total Cost for Quantity'].apply(lambda x: f"${x:,.2f}")
+                    st.dataframe(top_expensive[['Resource Type', 'Mapped Flavor', 'vCPUs', 'RAM (GB)', 'Total Cost']], use_container_width=True)
+
                 st.markdown("---")
                 st.subheader("📊 Detailed Results")
                 st.dataframe(result_df, use_container_width=True)
