@@ -506,64 +506,43 @@ def main():
                             st.session_state.show_transformed = False
                             st.rerun()
 
-                    # Create a form to prevent automatic rerun on selection changes
-                    with st.form("optimization_form"):
-                        st.markdown("**Select optimizations to apply:**")
+                    # Display checkboxes for each optimization
+                    st.markdown("**Select optimizations to apply:**")
 
-                        # Create multiselect widget inside form
-                        opportunity_options = [
-                            f"Row {opp['row_index'] + 1}: {opp['current_flavor']} → {opp['recommended_flavor']} (${opp['monthly_savings']:,.2f}/mo)"
-                            for idx, opp in enumerate(savings_summary['opportunities'])
-                        ]
+                    # Generate unique keys for each checkbox
+                    checkbox_keys = [f"opt_checkbox_{i}" for i in range(len(savings_summary['opportunities']))]
 
-                        option_to_idx = {opt: idx for idx, opt in enumerate(opportunity_options)}
-
-                        # Get current selection if available
-                        current_selection = []
-                        if 'last_selected_options' in st.session_state:
-                            current_selection = st.session_state.last_selected_options
-
-                        selected_options = st.multiselect(
-                            "Choose optimizations to apply:",
-                            options=opportunity_options,
-                            default=current_selection,
-                            key="optimization_multiselect"
-                        )
-
-                        # Show preview of what will be selected
-                        if selected_options:
-                            st.markdown(f"**Will apply:** {len(selected_options)} optimizations")
-
-                        # Submit button
-                        submit_button = st.form_submit_button("🚀 Apply Selected Optimizations", type="primary", use_container_width=True)
-
-                    if submit_button and selected_options:
-                        st.session_state.applied_optimizations = {
-                            option_to_idx[opt] for opt in selected_options if opt in option_to_idx
-                        }
-                        st.session_state.last_selected_options = selected_options
-                        st.session_state.show_transformed = True
-                    elif submit_button:
-                        st.warning("Please select at least one optimization")
-
-                    # Calculate and display potential savings from current selection
-                    if selected_options:
-                        selected_indices = {option_to_idx[opt] for opt in selected_options if opt in option_to_idx}
-                        selected_savings = sum(
-                            savings_summary['opportunities'][idx]['monthly_savings']
-                            for idx in selected_indices
-                        )
-                        st.markdown(f"**Potential Savings:** ${selected_savings:,.2f}/mo from {len(selected_options)} optimizations")
-
-                    # Show details of all opportunities
-                    with st.expander("📋 View All Optimization Details", expanded=False):
-                        for opp in savings_summary['opportunities']:
+                    # Display checkboxes with details
+                    for idx, opp in enumerate(savings_summary['opportunities']):
+                        cb_col, detail_col = st.columns([0.1, 0.9])
+                        with cb_col:
+                            st.checkbox(
+                                "",
+                                key=checkbox_keys[idx],
+                                label_visibility="collapsed"
+                            )
+                        with detail_col:
                             st.markdown(
                                 f"**{opp['resource_type']}**: {opp['current_flavor']} → "
                                 f"**{opp['recommended_flavor']}** | "
                                 f"Save **${opp['monthly_savings']:,.2f}/mo** ({opp['savings_percent']:.1f}%) | "
                                 f"Specs: {opp['alternative_specs']}"
                             )
+
+                    # Apply button - collects checkbox values when clicked
+                    if st.button("🚀 Apply Selected Optimizations", type="primary"):
+                        # Collect which checkboxes are checked
+                        selected_indices = {
+                            idx for idx, key in enumerate(checkbox_keys)
+                            if st.session_state.get(key, False)
+                        }
+
+                        if selected_indices:
+                            st.session_state.applied_optimizations = selected_indices
+                            st.session_state.show_transformed = True
+                            st.rerun()
+                        else:
+                            st.warning("Please select at least one optimization")
 
                     # Show transformed results if applied
                     if st.session_state.show_transformed and st.session_state.applied_optimizations:
