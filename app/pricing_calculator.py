@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Tuple
 from io import BytesIO
 import pandas as pd
 from mapping_engine import (
@@ -8,6 +8,442 @@ from mapping_engine import (
     get_region, get_ecs_flavors, get_db_flavors, get_available_db_types,
     get_oss_storage_classes
 )
+
+
+def find_cheaper_ecs_alternatives(
+    current_flavor_name: str,
+    vcpus: int,
+    ram_gb: int,
+    pricing_model: str,
+    hours_per_month: float,
+    ecs_data: Dict
+) -> List[Dict]:
+    """
+    Find ECS flavors that meet requirements but are cheaper than current selection.
+    Returns list of cheaper alternatives sorted by price (lowest first).
+    """
+    current_price = get_flavor_price(
+        current_flavor_name, 'ecs', None, None,
+        pricing_model, hours_per_month, ecs_data, {}
+    )
+    
+    # Skip if current flavor has no price or price is 0 (unavailable)
+    if current_price is None or current_price <= 0:
+        return []
+    
+    flavors = get_ecs_flavors(ecs_data)
+    cheaper_alternatives = []
+    
+    for flavor in flavors:
+        # Skip current flavor
+        if flavor['name'] == current_flavor_name:
+            continue
+            
+        # Check for EXACT spec match only (same vCPUs and same RAM)
+        if flavor['vcpus'] == vcpus and flavor['ram_gb'] == ram_gb:
+            alt_price = get_flavor_price(
+                flavor['name'], 'ecs', None, None,
+                pricing_model, hours_per_month, ecs_data, {}
+            )
+            
+            # Skip alternatives with no price or price is 0 (unavailable)
+            if alt_price is not None and alt_price > 0 and alt_price < current_price:
+                savings = current_price - alt_price
+                savings_percent = (savings / current_price) * 100 if current_price > 0 else 0
+                
+                cheaper_alternatives.append({
+                    'name': flavor['name'],
+                    'family': flavor.get('family', 'N/A'),
+                    'vcpus': flavor['vcpus'],
+                    'ram_gb': flavor['ram_gb'],
+                    'cpu_type': flavor.get('cpu_type', 'Intel'),
+                    'price': alt_price,
+                    'savings': savings,
+                    'savings_percent': round(savings_percent, 1)
+                })
+
+    # Sort by: 1) Non-t flavors prioritized, 2) Savings (highest first)
+    # "t" flavors (t6, t7) are deprioritized - they come last
+    cheaper_alternatives.sort(key=lambda x: (x['name'].startswith('t'), -x['savings']))
+    return cheaper_alternatives[:3]  # Return top 3 alternatives
+
+
+def find_cheaper_db_alternatives(
+    current_flavor_name: str,
+    vcpus: int,
+    ram_gb: int,
+    db_type: str,
+    deployment: str,
+    pricing_model: str,
+    hours_per_month: float,
+    db_data: Dict
+) -> List[Dict]:
+    """
+    Find database flavors that meet requirements but are cheaper than current selection.
+    Returns list of cheaper alternatives sorted by price (lowest first).
+    """
+    current_price = get_flavor_price(
+        current_flavor_name, 'database', db_type, deployment,
+        pricing_model, hours_per_month, {}, db_data
+    )
+    
+    # Skip if current flavor has no price or price is 0 (unavailable)
+    if current_price is None or current_price <= 0:
+        return []
+    
+    db_flavors = get_db_flavors(db_data, db_type)
+    cheaper_alternatives = []
+    
+    for flavor in db_flavors:
+        # Skip current flavor
+        if flavor['name'] == current_flavor_name:
+            continue
+
+        # Check for EXACT spec match only (same vCPUs and same RAM)
+        if flavor['vcpus'] == vcpus and flavor['ram_gb'] == ram_gb:
+            alt_price = get_flavor_price(
+                flavor['name'], 'database', db_type, deployment,
+                pricing_model, hours_per_month, {}, db_data
+            )
+            
+            # Skip alternatives with no price or price is 0 (unavailable)
+            if alt_price is not None and alt_price > 0 and alt_price < current_price:
+                savings = current_price - alt_price
+                savings_percent = (savings / current_price) * 100 if current_price > 0 else 0
+                
+                cheaper_alternatives.append({
+                    'name': flavor['name'],
+                    'vcpus': flavor['vcpus'],
+                    'ram_gb': flavor['ram_gb'],
+                    'price': alt_price,
+                    'savings': savings,
+                    'savings_percent': round(savings_percent, 1)
+                })
+    
+    # Sort by savings (highest first)
+    cheaper_alternatives.sort(key=lambda x: x['savings'], reverse=True)
+    return cheaper_alternatives[:3]  # Return top 3 alternatives
+
+
+def get_cost_savings_summary(
+    result_df: pd.DataFrame,
+    pricing_model: str,
+    hours_per_month: float,
+    ecs_data: Dict,
+    db_data: Dict,
+    original_summary: Optional[Dict] = None
+) -> Dict:
+    """
+    Calculate total potential savings across all resources.
+    Returns summary with total savings and per-resource breakdown.
+    """
+    total_current_cost = 0
+    total_potential_savings = 0
+    savings_opportunities = []
+    
+    for idx, row in result_df.iterrows():
+        resource_type = str(row.get('Resource Type', '')).lower()
+        flavor_name = row.get('Mapped Flavor')
+        vcpus = int(row.get('vCPUs', 0) or 0) if pd.notna(row.get('vCPUs')) else 0
+        ram_gb = int(row.get('RAM (GB)', 0) or 0) if pd.notna(row.get('RAM (GB)')) else 0
+        quantity = int(row.get('Quantity', 1) or 1) if pd.notna(row.get('Quantity')) else 1
+        
+        if not flavor_name or pd.isna(flavor_name):
+            continue
+            
+        current_cost = row.get('Compute Cost (Monthly)', 0)
+        
+        # Track current cost for ALL resources (ECS, Database, OSS)
+        total_current_cost += current_cost
+        
+        if resource_type == 'ecs':
+            alternatives = find_cheaper_ecs_alternatives(
+                flavor_name, vcpus, ram_gb, pricing_model, hours_per_month, ecs_data
+            )
+        elif resource_type == 'database':
+            db_type = row.get('DB Type', 'mysql')
+            deployment = row.get('Deployment', 'single')
+            alternatives = find_cheaper_db_alternatives(
+                flavor_name, vcpus, ram_gb, db_type, deployment,
+                pricing_model, hours_per_month, db_data
+            )
+        else:
+            continue
+        
+        if alternatives:
+            best_alt = alternatives[0]
+            monthly_savings = best_alt['savings'] * quantity
+            yearly_savings = monthly_savings * 12
+            
+            total_potential_savings += monthly_savings
+            
+            savings_opportunities.append({
+                'row_index': idx,
+                'resource_type': resource_type.upper(),
+                'current_flavor': flavor_name,
+                'current_cost': current_cost,
+                'recommended_flavor': best_alt['name'],
+                'recommended_cost': best_alt['price'] * quantity,
+                'monthly_savings': round(monthly_savings, 2),
+                'yearly_savings': round(yearly_savings, 2),
+                'savings_percent': best_alt['savings_percent'],
+                'alternative_specs': f"{best_alt['vcpus']}vCPU/{best_alt['ram_gb']}GB",
+                'all_alternatives': alternatives
+            })
+    
+    total_optimized_monthly = total_current_cost - total_potential_savings
+    total_optimized_yearly = total_optimized_monthly * 12
+    
+    return {
+        'total_monthly_savings': round(total_potential_savings, 2),
+        'total_yearly_savings': round(total_potential_savings * 12, 2),
+        'total_current_monthly': round(total_current_cost, 2),
+        'total_current_yearly': round(total_current_cost * 12, 2),
+        'total_optimized_monthly': round(total_optimized_monthly, 2),
+        'total_optimized_yearly': round(total_optimized_yearly, 2),
+        'savings_percent': round((total_potential_savings / total_current_cost) * 100, 1) if total_current_cost > 0 else 0,
+        'opportunities_count': len(savings_opportunities),
+        'opportunities': savings_opportunities,
+        'total_optimizable_resources': len(savings_opportunities)
+    }
+
+
+def apply_x_mode(
+    result_df: pd.DataFrame,
+    x_family: Optional[str],
+    ecs_data: Dict,
+    pricing_model: str,
+    hours_per_month: float
+) -> Tuple[pd.DataFrame, Dict]:
+    """
+    Apply X-Mode: Transform ALL ECS to X-series flavors.
+
+    Args:
+        result_df: Original results DataFrame
+        x_family: Target X family ('x1', 'x2e', or None for auto)
+        ecs_data: ECS pricing data
+        pricing_model: Pricing model (Hourly/Monthly/Yearly)
+        hours_per_month: Hours per month for hourly pricing
+
+    Returns:
+        Tuple of (transformed DataFrame, summary dict)
+    """
+    flavors = ecs_data.get('flavors', [])
+    transformed_df = result_df.copy()
+
+    total_original_cost = 0
+    total_new_cost = 0
+    transformed_count = 0
+    transformations = []
+
+    for idx, row in transformed_df.iterrows():
+        if row.get('Resource Type', '').lower() != 'ecs':
+            continue
+
+        original_flavor = row.get('Mapped Flavor', '')
+        vcpus = int(row.get('vCPUs', 0) or 0)
+        ram_gb = int(row.get('RAM (GB)', 0) or 0)
+        quantity = int(row.get('Quantity', 1) or 1)
+
+        if not original_flavor or vcpus == 0:
+            continue
+
+        original_cost = row.get('Compute Cost (Monthly)', 0) * quantity
+        total_original_cost += original_cost
+
+        # Find best X-series flavor
+        target_family = x_family if x_family else 'auto'
+
+        if target_family == 'auto':
+            # Auto: Pick cheapest X-series (x1 or x2e)
+            best_flavor = None
+            best_price = float('inf')
+
+            for flavor in flavors:
+                if not flavor['name'].lower().startswith(('x1.', 'x2e.')):
+                    continue
+                if flavor['vcpus'] == vcpus and flavor['ram_gb'] == ram_gb:
+                    price = get_flavor_price(
+                        flavor['name'], 'ecs', None, None,
+                        pricing_model, hours_per_month, ecs_data, {}
+                    )
+                    if price and price > 0 and price < best_price:
+                        best_price = price
+                        best_flavor = flavor
+        else:
+            # Specific family (x1 or x2e)
+            best_flavor = None
+            best_price = float('inf')
+            prefix = target_family.lower() + '.'
+
+            for flavor in flavors:
+                if not flavor['name'].lower().startswith(prefix):
+                    continue
+                if flavor['vcpus'] == vcpus and flavor['ram_gb'] == ram_gb:
+                    price = get_flavor_price(
+                        flavor['name'], 'ecs', None, None,
+                        pricing_model, hours_per_month, ecs_data, {}
+                    )
+                    if price and price > 0 and price < best_price:
+                        best_price = price
+                        best_flavor = flavor
+
+        if best_flavor:
+            new_cost = best_price * quantity
+            savings = original_cost - new_cost
+
+            transformed_df.at[idx, 'Mapped Flavor'] = best_flavor['name']
+            transformed_df.at[idx, 'Flavor Family'] = best_flavor.get('family', 'N/A')
+            transformed_df.at[idx, 'Compute Cost (Monthly)'] = best_price
+
+            # Recalculate total costs
+            storage_cost = row.get('Storage Cost (Monthly)', 0)
+            transformed_df.at[idx, 'Total Cost per Instance'] = best_price + storage_cost
+            transformed_df.at[idx, 'Total Cost for Quantity'] = (best_price + storage_cost) * quantity
+
+            total_new_cost += new_cost
+            transformed_count += 1
+
+            transformations.append({
+                'row_index': idx,
+                'original_flavor': original_flavor,
+                'new_flavor': best_flavor['name'],
+                'vcpus': vcpus,
+                'ram_gb': ram_gb,
+                'original_cost': original_cost,
+                'new_cost': new_cost,
+                'savings': savings,
+                'quantity': quantity
+            })
+        else:
+            # No matching X-series flavor found
+            total_new_cost += original_cost
+            transformations.append({
+                'row_index': idx,
+                'original_flavor': original_flavor,
+                'new_flavor': 'NOT FOUND',
+                'vcpus': vcpus,
+                'ram_gb': ram_gb,
+                'original_cost': original_cost,
+                'new_cost': original_cost,
+                'savings': 0,
+                'quantity': quantity,
+                'warning': f'No X-series flavor found for {vcpus}vCPU/{ram_gb}GB'
+            })
+
+    total_savings = total_original_cost - total_new_cost
+    savings_percent = (total_savings / total_original_cost * 100) if total_original_cost > 0 else 0
+
+    summary = {
+        'x_family': x_family or 'auto',
+        'total_original_cost': round(total_original_cost, 2),
+        'total_new_cost': round(total_new_cost, 2),
+        'total_savings': round(total_savings, 2),
+        'savings_percent': round(savings_percent, 1),
+        'transformed_count': transformed_count,
+        'total_ecs_count': len([r for _, r in result_df.iterrows() if r.get('Resource Type', '').lower() == 'ecs']),
+        'transformations': transformations
+    }
+
+    return transformed_df, summary
+
+
+def create_optimized_excel(
+    result_df: pd.DataFrame,
+    savings_summary: Dict,
+    summary: Dict,
+    output: Union[str, BytesIO]
+) -> None:
+    """
+    Create an Excel file with optimized pricing applied.
+    Replaces current flavors with recommended cheaper alternatives.
+    """
+    # Create a copy of the result DataFrame
+    optimized_df = result_df.copy()
+    
+    # Track which rows were optimized
+    optimization_map = {opp['row_index']: opp for opp in savings_summary['opportunities']}
+    
+    # Apply optimizations
+    optimized_df['Original Flavor'] = optimized_df['Mapped Flavor']
+    optimized_df['Original Compute Cost'] = optimized_df['Compute Cost (Monthly)']
+    optimized_df['Original Total Cost'] = optimized_df['Total Cost for Quantity']
+    optimized_df['Optimization Applied'] = 'No'
+    optimized_df['Savings Amount'] = 0.0
+    optimized_df['Savings Percent'] = '0%'
+    
+    for idx, row in optimized_df.iterrows():
+        if idx in optimization_map:
+            opp = optimization_map[idx]
+            # Update the flavor
+            optimized_df.at[idx, 'Mapped Flavor'] = opp['recommended_flavor']
+            # Update compute cost
+            optimized_df.at[idx, 'Compute Cost (Monthly)'] = opp['recommended_cost'] / row.get('Quantity', 1) if row.get('Quantity', 1) > 0 else opp['recommended_cost']
+            # Recalculate total cost
+            storage_cost = row.get('Storage Cost (Monthly)', 0)
+            quantity = row.get('Quantity', 1)
+            new_compute_cost = opp['recommended_cost'] / quantity if quantity > 0 else opp['recommended_cost']
+            optimized_df.at[idx, 'Total Cost per Instance'] = new_compute_cost + storage_cost
+            optimized_df.at[idx, 'Total Cost for Quantity'] = opp['recommended_cost'] + (storage_cost * quantity)
+            # Mark as optimized
+            optimized_df.at[idx, 'Optimization Applied'] = 'Yes'
+            optimized_df.at[idx, 'Savings Amount'] = opp['monthly_savings']
+            optimized_df.at[idx, 'Savings Percent'] = f"{opp['savings_percent']:.1f}%"
+    
+    # Create Excel with multiple sheets
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Sheet 1: Optimized Results
+        optimized_df.to_excel(writer, sheet_name='Optimized Results', index=False)
+        
+        # Sheet 2: Optimization Summary
+        summary_data = {
+            'Metric': [
+                'Current Total Monthly Cost',
+                'Optimized Total Monthly Cost',
+                'Total Monthly Savings',
+                'Current Total Yearly Cost',
+                'Optimized Total Yearly Cost', 
+                'Total Yearly Savings',
+                'Savings Percentage',
+                'Resources Optimized',
+                'Total Resources'
+            ],
+            'Value': [
+                f"${savings_summary['total_current_monthly']:,.2f}",
+                f"${savings_summary['total_optimized_monthly']:,.2f}",
+                f"${savings_summary['total_monthly_savings']:,.2f}",
+                f"${savings_summary['total_current_yearly']:,.2f}",
+                f"${savings_summary['total_optimized_yearly']:,.2f}",
+                f"${savings_summary['total_yearly_savings']:,.2f}",
+                f"{savings_summary['savings_percent']:.1f}%",
+                savings_summary['opportunities_count'],
+                len(result_df)
+            ]
+        }
+        summary_df = pd.DataFrame(summary_data)
+        summary_df.to_excel(writer, sheet_name='Optimization Summary', index=False)
+        
+        # Sheet 3: Detailed Changes
+        if savings_summary['opportunities']:
+            changes_df = pd.DataFrame([
+                {
+                    'Row': opp['row_index'] + 1,
+                    'Resource Type': opp['resource_type'],
+                    'Original Flavor': opp['current_flavor'],
+                    'Optimized Flavor': opp['recommended_flavor'],
+                    'Specs': opp['alternative_specs'],
+                    'Original Cost': f"${opp['current_cost']:,.2f}",
+                    'Optimized Cost': f"${opp['recommended_cost']:,.2f}",
+                    'Monthly Savings': f"${opp['monthly_savings']:,.2f}",
+                    'Yearly Savings': f"${opp['yearly_savings']:,.2f}",
+                    'Savings %': f"{opp['savings_percent']:.1f}%"
+                }
+                for opp in savings_summary['opportunities']
+            ])
+            changes_df.to_excel(writer, sheet_name='Detailed Changes', index=False)
+        
+        # Sheet 4: Original Results (for comparison)
+        result_df.to_excel(writer, sheet_name='Original Results', index=False)
 
 
 def get_flavor_price(

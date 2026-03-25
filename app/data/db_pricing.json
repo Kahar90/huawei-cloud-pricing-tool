@@ -39,18 +39,6 @@
         }
       },
       {
-        "name": "mysql.general.2vCPU.16GB",
-        "vcpus": 2,
-        "ram_gb": 16,
-        "pricing": {
-          "single": {
-            "hourly": 0.271,
-            "monthly": 151.05,
-            "yearly": 1510.5
-          }
-        }
-      },
-      {
         "name": "mysql.general.4vCPU.8GB",
         "vcpus": 4,
         "ram_gb": 8,
@@ -85,18 +73,6 @@
         }
       },
       {
-        "name": "mysql.general.4vCPU.32GB",
-        "vcpus": 4,
-        "ram_gb": 32,
-        "pricing": {
-          "single": {
-            "hourly": 0.542,
-            "monthly": 302.2,
-            "yearly": 3022.0
-          }
-        }
-      },
-      {
         "name": "mysql.general.8vCPU.16GB",
         "vcpus": 8,
         "ram_gb": 16,
@@ -127,66 +103,6 @@
             "hourly": 0.893,
             "monthly": 475.29,
             "yearly": 4752.9
-          }
-        }
-      },
-      {
-        "name": "mysql.general.8vCPU.64GB",
-        "vcpus": 8,
-        "ram_gb": 64,
-        "pricing": {
-          "single": {
-            "hourly": 1.083,
-            "monthly": 604.3,
-            "yearly": 6043.0
-          }
-        }
-      },
-      {
-        "name": "mysql.general.16vCPU.32GB",
-        "vcpus": 16,
-        "ram_gb": 32,
-        "pricing": {
-          "single": {
-            "hourly": 1.607,
-            "monthly": 855.51,
-            "yearly": 8555.1
-          }
-        }
-      },
-      {
-        "name": "mysql.general.16vCPU.64GB",
-        "vcpus": 16,
-        "ram_gb": 64,
-        "pricing": {
-          "ha": {
-            "hourly": 3.572,
-            "monthly": 1901.14,
-            "yearly": 19011.4
-          }
-        }
-      },
-      {
-        "name": "mysql.general.32vCPU.128GB",
-        "vcpus": 32,
-        "ram_gb": 128,
-        "pricing": {
-          "ha": {
-            "hourly": 7.144,
-            "monthly": 3803.04,
-            "yearly": 38030.4
-          }
-        }
-      },
-      {
-        "name": "mysql.general.64vCPU.256GB",
-        "vcpus": 64,
-        "ram_gb": 256,
-        "pricing": {
-          "ha": {
-            "hourly": 14.288,
-            "monthly": 7606.08,
-            "yearly": 76060.8
           }
         }
       }
@@ -227,18 +143,6 @@
         }
       },
       {
-        "name": "postgresql.general.2vCPU.16GB",
-        "vcpus": 2,
-        "ram_gb": 16,
-        "pricing": {
-          "single": {
-            "hourly": 0.285,
-            "monthly": 159.03,
-            "yearly": 1590.3
-          }
-        }
-      },
-      {
         "name": "postgresql.general.4vCPU.8GB",
         "vcpus": 4,
         "ram_gb": 8,
@@ -269,18 +173,6 @@
             "hourly": 0.469,
             "monthly": 249.76,
             "yearly": 2497.6
-          }
-        }
-      },
-      {
-        "name": "postgresql.general.4vCPU.32GB",
-        "vcpus": 4,
-        "ram_gb": 32,
-        "pricing": {
-          "single": {
-            "hourly": 0.57,
-            "monthly": 318.06,
-            "yearly": 3180.6
           }
         }
       },
@@ -319,18 +211,6 @@
         }
       },
       {
-        "name": "postgresql.general.8vCPU.64GB",
-        "vcpus": 8,
-        "ram_gb": 64,
-        "pricing": {
-          "single": {
-            "hourly": 1.14,
-            "monthly": 636.12,
-            "yearly": 6361.2
-          }
-        }
-      },
-      {
         "name": "postgresql.general.16vCPU.32GB",
         "vcpus": 16,
         "ram_gb": 32,
@@ -361,18 +241,6 @@
             "hourly": 1.877,
             "monthly": 999.12,
             "yearly": 9991.2
-          }
-        }
-      },
-      {
-        "name": "postgresql.general.16vCPU.128GB",
-        "vcpus": 16,
-        "ram_gb": 128,
-        "pricing": {
-          "single": {
-            "hourly": 2.28,
-            "monthly": 1272.24,
-            "yearly": 12722.4
           }
         }
       },
@@ -411,18 +279,6 @@
         }
       },
       {
-        "name": "postgresql.general.32vCPU.256GB",
-        "vcpus": 32,
-        "ram_gb": 256,
-        "pricing": {
-          "single": {
-            "hourly": 4.56,
-            "monthly": 2544.58,
-            "yearly": 25445.8
-          }
-        }
-      },
-      {
         "name": "postgresql.general.64vCPU.128GB",
         "vcpus": 64,
         "ram_gb": 128,
@@ -453,18 +309,6 @@
             "hourly": 7.509,
             "monthly": 3996.46,
             "yearly": 39964.6
-          }
-        }
-      },
-      {
-        "name": "postgresql.general.64vCPU.512GB",
-        "vcpus": 64,
-        "ram_gb": 512,
-        "pricing": {
-          "single": {
-            "hourly": 9.12,
-            "monthly": 5089.06,
-            "yearly": 50890.6
           }
         }
       }

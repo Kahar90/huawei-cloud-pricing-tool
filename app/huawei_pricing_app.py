@@ -2,12 +2,12 @@ import streamlit as st
 import pandas as pd
 import os
 from io import BytesIO
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 from mapping_engine import (
     load_ecs_pricing, load_db_pricing, load_storage_pricing, load_oss_pricing,
     get_region, get_available_db_types, map_resources
 )
-from pricing_calculator import calculate_all_costs, compute_summary, create_output_excel
+from pricing_calculator import calculate_all_costs, compute_summary, create_output_excel, get_cost_savings_summary, create_optimized_excel, apply_x_mode
 
 DEFAULT_REGION = "ap-southeast-3"
 DEFAULT_REGION_NAME = "AP-Jakarta"
@@ -39,12 +39,126 @@ def create_standard_template() -> pd.DataFrame:
     }
     return pd.DataFrame(data)
 
-def validate_dataframe(df: pd.DataFrame) -> Tuple[bool, str]:
-    df_cols = [col for col in df.columns]
+def validate_row(row: pd.Series, row_num: int) -> Tuple[bool, List[str]]:
+    """
+    Validate a single row and return detailed error messages.
+    Returns (is_valid, list_of_errors).
+    """
+    errors = []
+    resource_type = str(row.get('Resource Type', '')).strip()
+    
+    # Check Resource Type
+    if not resource_type:
+        errors.append(f"Row {row_num}: Resource Type is empty. Must be one of: ECS, Database, OSS")
+    elif resource_type not in ['ECS', 'Database', 'OSS']:
+        errors.append(f"Row {row_num}: Invalid Resource Type '{resource_type}'. Valid values: ECS, Database, OSS")
+    
+    # Check numeric values based on resource type
+    if resource_type and resource_type != 'OSS':
+        vcpus = row.get('vCPUs')
+        if pd.isna(vcpus) or str(vcpus).strip() == '':
+            errors.append(f"Row {row_num}: vCPUs is required for {resource_type} resources")
+        else:
+            try:
+                vcpus_val = int(float(str(vcpus).strip()))
+                if vcpus_val <= 0:
+                    errors.append(f"Row {row_num}: vCPUs must be greater than 0, got {vcpus_val}")
+            except (ValueError, TypeError):
+                errors.append(f"Row {row_num}: vCPUs '{vcpus}' is not a valid number")
+        
+        ram = row.get('RAM (GB)')
+        if pd.isna(ram) or str(ram).strip() == '':
+            errors.append(f"Row {row_num}: RAM (GB) is required for {resource_type} resources")
+        else:
+            try:
+                ram_val = int(float(str(ram).strip()))
+                if ram_val <= 0:
+                    errors.append(f"Row {row_num}: RAM (GB) must be greater than 0, got {ram_val}")
+            except (ValueError, TypeError):
+                errors.append(f"Row {row_num}: RAM (GB) '{ram}' is not a valid number")
+    
+    # Check Storage
+    storage = row.get('Storage (GB)')
+    if pd.isna(storage) or str(storage).strip() == '':
+        errors.append(f"Row {row_num}: Storage (GB) is required")
+    else:
+        try:
+            storage_val = int(float(str(storage).strip()))
+            if storage_val < 0:
+                errors.append(f"Row {row_num}: Storage (GB) cannot be negative, got {storage_val}")
+        except (ValueError, TypeError):
+            errors.append(f"Row {row_num}: Storage (GB) '{storage}' is not a valid number")
+    
+    # Check Storage Type
+    stype = str(row.get('Storage Type', '')).strip()
+    if not stype or stype == 'nan':
+        errors.append(f"Row {row_num}: Storage Type is required")
+    else:
+        stype_lower = stype.lower().replace('-', '').replace(' ', '').replace('_', '')
+        
+        if resource_type == 'OSS':
+            valid_oss = ['standard', 'infrequentaccess', 'archive', 'deeparchive']
+            if stype_lower not in valid_oss:
+                errors.append(f"Row {row_num}: Invalid OSS Storage Class '{stype}'. Valid: Standard, InfrequentAccess, Archive, DeepArchive")
+        else:
+            valid_block = ['ssd', 'highio', 'ultrahighio', 'generalssdv2', 'extremessd', 'generalpurposessd']
+            if stype_lower not in valid_block:
+                errors.append(f"Row {row_num}: Invalid Storage Type '{stype}'. Valid: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD")
+    
+    # Check Quantity
+    quantity = row.get('Quantity')
+    if pd.notna(quantity) and str(quantity).strip() != '':
+        try:
+            qty_val = int(float(str(quantity).strip()))
+            if qty_val <= 0:
+                errors.append(f"Row {row_num}: Quantity must be greater than 0, got {qty_val}")
+        except (ValueError, TypeError):
+            errors.append(f"Row {row_num}: Quantity '{quantity}' is not a valid number")
+    
+    # Check Database-specific fields
+    if resource_type == 'Database':
+        db_type = str(row.get('DB Type', '')).strip()
+        if db_type and db_type != 'nan':
+            if db_type.lower() not in ['mysql', 'postgresql']:
+                errors.append(f"Row {row_num}: Invalid DB Type '{db_type}'. Valid: mysql, postgresql")
+        
+        deployment = str(row.get('Deployment', '')).strip()
+        if deployment and deployment != 'nan':
+            if deployment.lower() not in ['single', 'ha']:
+                errors.append(f"Row {row_num}: Invalid Deployment '{deployment}'. Valid: single, ha")
+    
+    return len(errors) == 0, errors
+
+
+def validate_dataframe(df: pd.DataFrame) -> Tuple[bool, str, List[str]]:
+    """
+    Enhanced dataframe validation with detailed error messages.
+    Returns (is_valid, summary_message, detailed_errors).
+    """
+    df_cols = list(df.columns)
     required_cols = ['Resource Type', 'vCPUs', 'RAM (GB)', 'Storage (GB)', 'Storage Type', 'Quantity']
     missing = [col for col in required_cols if col not in df_cols]
+    
     if missing:
-        return False, f"Missing required columns: {', '.join(missing)}"
+        suggestion = "Please download the template from the sidebar to see the correct format."
+        return False, f"Missing required columns: {', '.join(missing)}. {suggestion}", []
+    
+    all_errors = []
+    
+    # Validate each row
+    for idx, row in df.iterrows():
+        row_num = idx + 1  # 1-based for user-friendliness
+        is_valid, row_errors = validate_row(row, row_num)
+        all_errors.extend(row_errors)
+    
+    if all_errors:
+        error_count = len(all_errors)
+        error_preview = all_errors[:5]  # Show first 5 errors
+        summary = f"Found {error_count} validation error(s):"
+        detailed = error_preview
+        if error_count > 5:
+            detailed.append(f"... and {error_count - 5} more errors")
+        return False, summary, detailed
     
     # Convert numeric columns
     for col in ['vCPUs', 'RAM (GB)', 'Storage (GB)', 'Quantity']:
@@ -53,44 +167,14 @@ def validate_dataframe(df: pd.DataFrame) -> Tuple[bool, str]:
                 try:
                     df[col] = pd.to_numeric(df[col], errors='coerce')
                 except:
-                    return False, f"Column '{col}' contains invalid numeric values"
+                    return False, f"Column '{col}' contains invalid numeric values", []
     
     # Convert string columns to string type
     for col in ['Resource Type', 'Storage Type', 'Desired Tier', 'DB Type', 'Deployment']:
         if col in df_cols:
             df[col] = df[col].astype(str)
     
-    # Storage type validation depends on resource type
-    block_storage_types = ['SSD', 'HighIO', 'UltraHighIO', 'GeneralSSDv2', 'ExtremeSSD', 'General Purpose SSD', 'High I/O', 'Ultra-high I/O', 'Extreme SSD']
-    oss_storage_classes = ['Standard', 'InfrequentAccess', 'Archive', 'DeepArchive']
-    
-    if 'Storage Type' in df_cols and 'Resource Type' in df_cols:
-        for _, row in df.iterrows():
-            resource_type = str(row.get('Resource Type', '')).strip().lower()
-            stype = str(row.get('Storage Type', '')).strip()
-            if not stype or stype == 'nan':
-                continue
-            stype_lower = stype.lower().replace('-', '').replace(' ', '').replace('_', '')
-            
-            if resource_type == 'oss':
-                # OSS uses storage classes
-                valid_oss_lower = [s.lower().replace('-', '').replace(' ', '').replace('_', '') for s in oss_storage_classes]
-                if stype_lower not in valid_oss_lower:
-                    st.warning(f"Unknown OSS Storage Class '{stype}'. Valid classes: Standard, InfrequentAccess, Archive, DeepArchive")
-            else:
-                # ECS/Database uses block storage types
-                valid_block_lower = [s.lower().replace('-', '').replace(' ', '').replace('_', '') for s in block_storage_types]
-                if stype_lower not in valid_block_lower:
-                    st.warning(f"Unknown Storage Type '{stype}'. Valid types: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD")
-    
-    valid_resource_types = ['ECS', 'Database', 'OSS']
-    if 'Resource Type' in df_cols:
-        for rtype in df['Resource Type'].unique():
-            rtype_str = str(rtype).strip()
-            if rtype_str not in valid_resource_types:
-                return False, f"Invalid Resource Type: '{rtype_str}'. Valid values: {', '.join(valid_resource_types)}"
-    
-    return True, "Validation successful"
+    return True, f"Validation successful! {len(df)} row(s) ready for processing.", []
 
 def process_file(
     df: pd.DataFrame,
@@ -181,6 +265,33 @@ def main():
         st.info(f"🔒 Region locked to: **{DEFAULT_REGION_NAME}**")
         st.caption("Region selection disabled for this version.")
         st.markdown("---")
+
+        x_mode_enabled = st.checkbox(
+            "Enable X-Mode",
+            value=False,
+            help="Switch ALL ECS to X-series flavors for maximum cost savings"
+        )
+
+        x_family = None
+        if x_mode_enabled:
+            x_family_select = st.selectbox(
+                "Target X-Series",
+                options=["X1 (FlexusX - Small/Medium)", "X2E (FlexusX - Large)", "Auto (Best Match)"],
+                index=0,
+                help="X1: 1-16 vCPUs | X2E: 2-64 vCPUs | Auto: Choose based on specs"
+            )
+            x_family_select_str = str(x_family_select) if x_family_select else ""
+            if "X1" in x_family_select_str:
+                x_family = "x1"
+            elif "X2E" in x_family_select_str:
+                x_family = "x2e"
+            else:
+                x_family = "auto"
+
+            st.info("📊 X-Mode will transform all ECS to X-series flavors")
+            st.caption("⚠️ Review preview before applying")
+
+        st.markdown("---")
         if st.button("📥 Download Template", type="secondary"):
             template_df = create_standard_template()
             output = BytesIO()
@@ -207,9 +318,12 @@ def main():
             st.subheader("📋 Data Preview (First 10 Rows)")
             st.dataframe(df.head(10), use_container_width=True)
             if run_calculation:
-                is_valid, message = validate_dataframe(df)
+                is_valid, message, errors = validate_dataframe(df)
                 if not is_valid:
                     st.error(message)
+                    if errors:
+                        for error in errors:
+                            st.warning(error)
                     return
                 with st.spinner("Processing..."):
                     result_df, summary = process_file(
@@ -219,6 +333,135 @@ def main():
                     )
                 st.success("✅ Processing complete!")
                 st.markdown("---")
+                
+                # Calculate cost savings
+                with st.spinner("Analyzing cost optimization opportunities..."):
+                    savings_summary = get_cost_savings_summary(
+                        result_df, pricing_model, hours_per_month,
+                        ecs_data, db_data
+                    )
+                
+                # Display X-Mode Preview if enabled
+                if x_mode_enabled and x_family:
+                    st.subheader("🚀 X-Mode Transformation Preview")
+                    st.info(f"Switching ALL ECS to **{x_family.upper()}** series flavors")
+
+                    with st.spinner("Calculating X-Mode transformation..."):
+                        x_transformed_df, x_summary = apply_x_mode(
+                            result_df, x_family, ecs_data, pricing_model, hours_per_month
+                        )
+
+                    # Show X-Mode summary metrics
+                    x_col1, x_col2, x_col3 = st.columns(3)
+                    with x_col1:
+                        st.metric(
+                            "Original ECS Cost",
+                            f"${x_summary['total_original_cost']:,.2f}"
+                        )
+                    with x_col2:
+                        st.metric(
+                            "X-Mode Cost",
+                            f"${x_summary['total_new_cost']:,.2f}",
+                            delta=f"-${x_summary['total_savings']:,.2f} ({x_summary['savings_percent']:.1f}%)"
+                        )
+                    with x_col3:
+                        st.metric(
+                            "Resources Transformed",
+                            f"{x_summary['transformed_count']}/{x_summary['total_ecs_count']}"
+                        )
+
+                    # Show transformation details
+                    with st.expander("📋 View X-Mode Transformations"):
+                        x_df = pd.DataFrame([
+                            {
+                                'Original Flavor': t['original_flavor'],
+                                'New Flavor': t['new_flavor'],
+                                'Specs': f"{t['vcpus']}vCPU/{t['ram_gb']}GB",
+                                'Quantity': t['quantity'],
+                                'Original Cost': f"${t['original_cost']:,.2f}",
+                                'New Cost': f"${t['new_cost']:,.2f}",
+                                'Savings': f"${t['savings']:,.2f}"
+                            }
+                            for t in x_summary['transformations']
+                        ])
+                        st.dataframe(x_df, use_container_width=True, height=300)
+
+                        # Show warnings for missing flavors
+                        warnings = [t for t in x_summary['transformations'] if 'warning' in t]
+                        if warnings:
+                            st.warning("⚠️ Some resources couldn't be transformed:")
+                            for w in warnings:
+                                st.caption(f"• {w['warning']}")
+
+                    # Add download button for X-Mode results
+                    st.markdown("#### 📥 Download X-Mode Quote")
+                    x_output = BytesIO()
+                    create_optimized_excel(x_transformed_df, {
+                        'total_current_monthly': x_summary['total_original_cost'],
+                        'total_current_yearly': x_summary['total_original_cost'] * 12,
+                        'total_optimized_monthly': x_summary['total_new_cost'],
+                        'total_optimized_yearly': x_summary['total_new_cost'] * 12,
+                        'total_monthly_savings': x_summary['total_savings'],
+                        'total_yearly_savings': x_summary['total_savings'] * 12,
+                        'savings_percent': x_summary['savings_percent'],
+                        'opportunities_count': x_summary['transformed_count'],
+                        'opportunities': []
+                    }, summary, x_output)
+                    x_output.seek(0)
+                    st.download_button(
+                        label="💾 Download X-Mode Quote",
+                        data=x_output.getvalue(),
+                        file_name=f"huawei_cloud_xmode_{x_family}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+
+                    st.markdown("---")
+
+                # Display Cost Optimization Section if opportunities exist
+                if not x_mode_enabled and savings_summary['opportunities_count'] > 0:
+                    st.subheader("💡 Cost Optimization Opportunities")
+                    st.info(f"Found **{savings_summary['opportunities_count']}** resources with potential savings!")
+                    
+                    # Show Current vs Optimized costs
+                    st.markdown("#### 📊 Pricing Comparison")
+                    comp_col1, comp_col2, comp_col3 = st.columns(3)
+                    with comp_col1:
+                        st.metric(
+                            "Current Total (Monthly)",
+                            f"${savings_summary['total_current_monthly']:,.2f}"
+                        )
+                    with comp_col2:
+                        st.metric(
+                            "Optimized Total (Monthly)",
+                            f"${savings_summary['total_optimized_monthly']:,.2f}",
+                            delta=f"-${savings_summary['total_monthly_savings']:,.2f} ({savings_summary['savings_percent']:.1f}%)"
+                        )
+                    with comp_col3:
+                        st.metric(
+                            "Total Savings (Yearly)",
+                            f"${savings_summary['total_yearly_savings']:,.2f}"
+                        )
+                    
+                    # Show ALL opportunities in detailed table
+                    st.markdown("#### 📋 All Optimization Opportunities")
+                    savings_df = pd.DataFrame([
+                        {
+                            'Resource Type': opp['resource_type'],
+                            'Current Flavor': opp['current_flavor'],
+                            'Current Cost': f"${opp['current_cost']:,.2f}",
+                            'Recommended': opp['recommended_flavor'],
+                            'New Cost': f"${opp['recommended_cost']:,.2f}",
+                            'Monthly Savings': f"${opp['monthly_savings']:,.2f}",
+                            'Yearly Savings': f"${opp['yearly_savings']:,.2f}",
+                            'Savings %': f"{opp['savings_percent']:.1f}%",
+                            'Specs': opp['alternative_specs']
+                        }
+                        for opp in savings_summary['opportunities']
+                    ])
+                    st.dataframe(savings_df, use_container_width=True, height=400)
+                    
+                    st.markdown("---")
+                
                 st.subheader("💰 Cost Summary")
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
@@ -234,13 +477,31 @@ def main():
                 st.dataframe(result_df, use_container_width=True)
                 st.markdown("---")
                 st.subheader("📥 Download Results")
-                excel_bytes = to_excel_bytes(result_df, summary)
-                st.download_button(
-                    label="💾 Download Enriched Excel",
-                    data=excel_bytes,
-                    file_name="huawei_cloud_pricing_results.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+                
+                # Create two columns for download buttons
+                dl_col1, dl_col2 = st.columns(2)
+                
+                with dl_col1:
+                    excel_bytes = to_excel_bytes(result_df, summary)
+                    st.download_button(
+                        label="💾 Download Original Results",
+                        data=excel_bytes,
+                        file_name="huawei_cloud_pricing_results.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                
+                with dl_col2:
+                    if savings_summary['opportunities_count'] > 0:
+                        optimized_output = BytesIO()
+                        create_optimized_excel(result_df, savings_summary, summary, optimized_output)
+                        optimized_output.seek(0)
+                        st.download_button(
+                            label="✨ Download Optimized Quote",
+                            data=optimized_output.getvalue(),
+                            file_name="huawei_cloud_pricing_optimized.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                        st.caption(f"Applied {savings_summary['opportunities_count']} optimizations, saves ${savings_summary['total_monthly_savings']:,.2f}/mo")
         except Exception as e:
             st.error(f"Error processing file: {str(e)}")
             st.info("Please check that your file matches the required format.")
