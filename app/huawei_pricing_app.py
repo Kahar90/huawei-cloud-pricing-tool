@@ -368,7 +368,6 @@ def main():
                 st.session_state.show_transformed = False
 
                 st.success("✅ Processing complete!")
-                st.rerun()
 
             # Display results from session state if available
             if st.session_state.calculation_results is not None:
