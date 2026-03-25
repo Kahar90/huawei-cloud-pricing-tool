@@ -211,6 +211,16 @@ def main():
         page_icon="☁️",
         layout="wide"
     )
+
+    if 'calculation_results' not in st.session_state:
+        st.session_state.calculation_results = None
+    if 'selected_optimizations' not in st.session_state:
+        st.session_state.selected_optimizations = set()
+    if 'applied_optimizations' not in st.session_state:
+        st.session_state.applied_optimizations = None
+    if 'show_transformed' not in st.session_state:
+        st.session_state.show_transformed = False
+
     st.title("☁️ Huawei Cloud Pricing Tool")
     st.markdown(f"**Region:** {DEFAULT_REGION_NAME} (`{DEFAULT_REGION}`)")
     st.markdown("---")
@@ -317,6 +327,7 @@ def main():
                 df['Deployment'] = ''
             st.subheader("📋 Data Preview (First 10 Rows)")
             st.dataframe(df.head(10), use_container_width=True)
+
             if run_calculation:
                 is_valid, message, errors = validate_dataframe(df)
                 if not is_valid:
@@ -325,22 +336,53 @@ def main():
                         for error in errors:
                             st.warning(error)
                     return
+
                 with st.spinner("Processing..."):
                     result_df, summary = process_file(
                         df, pricing_model, hours_per_month,
                         default_db_type, default_deployment,
                         ecs_data, db_data, storage_data, oss_data
                     )
-                st.success("✅ Processing complete!")
-                st.markdown("---")
-                
+
                 # Calculate cost savings
                 with st.spinner("Analyzing cost optimization opportunities..."):
                     savings_summary = get_cost_savings_summary(
                         result_df, pricing_model, hours_per_month,
                         ecs_data, db_data
                     )
-                
+
+                # Store results in session state
+                st.session_state.calculation_results = {
+                    'result_df': result_df,
+                    'summary': summary,
+                    'savings_summary': savings_summary,
+                    'pricing_model': pricing_model,
+                    'hours_per_month': hours_per_month,
+                    'x_mode_enabled': x_mode_enabled,
+                    'x_family': x_family
+                }
+
+                # Reset selective optimization state
+                st.session_state.selected_optimizations = set()
+                st.session_state.applied_optimizations = None
+                st.session_state.show_transformed = False
+
+                st.success("✅ Processing complete!")
+                st.rerun()
+
+            # Display results from session state if available
+            if st.session_state.calculation_results is not None:
+                results = st.session_state.calculation_results
+                result_df = results['result_df']
+                summary = results['summary']
+                savings_summary = results['savings_summary']
+                pricing_model = results['pricing_model']
+                hours_per_month = results['hours_per_month']
+                x_mode_enabled = results['x_mode_enabled']
+                x_family = results['x_family']
+
+                st.markdown("---")
+
                 # Display X-Mode Preview if enabled
                 if x_mode_enabled and x_family:
                     st.subheader("🚀 X-Mode Transformation Preview")
@@ -421,7 +463,7 @@ def main():
                 if not x_mode_enabled and savings_summary['opportunities_count'] > 0:
                     st.subheader("💡 Cost Optimization Opportunities")
                     st.info(f"Found **{savings_summary['opportunities_count']}** resources with potential savings!")
-                    
+
                     # Show Current vs Optimized costs
                     st.markdown("#### 📊 Pricing Comparison")
                     comp_col1, comp_col2, comp_col3 = st.columns(3)
@@ -441,25 +483,160 @@ def main():
                             "Total Savings (Yearly)",
                             f"${savings_summary['total_yearly_savings']:,.2f}"
                         )
-                    
-                    # Show ALL opportunities in detailed table
-                    st.markdown("#### 📋 All Optimization Opportunities")
-                    savings_df = pd.DataFrame([
-                        {
-                            'Resource Type': opp['resource_type'],
-                            'Current Flavor': opp['current_flavor'],
-                            'Current Cost': f"${opp['current_cost']:,.2f}",
-                            'Recommended': opp['recommended_flavor'],
-                            'New Cost': f"${opp['recommended_cost']:,.2f}",
-                            'Monthly Savings': f"${opp['monthly_savings']:,.2f}",
-                            'Yearly Savings': f"${opp['yearly_savings']:,.2f}",
-                            'Savings %': f"{opp['savings_percent']:.1f}%",
-                            'Specs': opp['alternative_specs']
+
+                    # Selective Optimization UI
+                    st.markdown("#### 🎯 Selective Optimization")
+                    st.caption("Select which optimizations to apply:")
+
+                    # Bulk action buttons
+                    bulk_col1, bulk_col2, bulk_col3 = st.columns(3)
+                    with bulk_col1:
+                        if st.button("☑️ Select All", key="select_all"):
+                            st.session_state.selected_optimizations = set(
+                                range(len(savings_summary['opportunities']))
+                            )
+                            st.rerun()
+                    with bulk_col2:
+                        if st.button("⬜ Select None", key="select_none"):
+                            st.session_state.selected_optimizations = set()
+                            st.rerun()
+                    with bulk_col3:
+                        if st.button("🔄 Reset", key="reset_selection"):
+                            st.session_state.selected_optimizations = set()
+                            st.session_state.applied_optimizations = None
+                            st.session_state.show_transformed = False
+                            st.rerun()
+
+                    # Display opportunities with checkboxes
+                    st.markdown("**Select optimizations to apply:**")
+
+                    for idx, opp in enumerate(savings_summary['opportunities']):
+                        # Create a unique key for each checkbox
+                        checkbox_key = f"opt_checkbox_{idx}"
+
+                        # Determine if this optimization is selected
+                        is_selected = idx in st.session_state.selected_optimizations
+
+                        # Create columns for checkbox and details
+                        cb_col, detail_col = st.columns([0.1, 0.9])
+
+                        with cb_col:
+                            # Use the checkbox with the current state
+                            new_state = st.checkbox(
+                                "",
+                                value=is_selected,
+                                key=checkbox_key,
+                                label_visibility="collapsed"
+                            )
+
+                            # Update session state based on checkbox
+                            if new_state and idx not in st.session_state.selected_optimizations:
+                                st.session_state.selected_optimizations.add(idx)
+                            elif not new_state and idx in st.session_state.selected_optimizations:
+                                st.session_state.selected_optimizations.discard(idx)
+
+                        with detail_col:
+                            st.markdown(
+                                f"**{opp['resource_type']}**: {opp['current_flavor']} → "
+                                f"**{opp['recommended_flavor']}** | "
+                                f"Save **${opp['monthly_savings']:,.2f}/mo** ({opp['savings_percent']:.1f}%) | "
+                                f"Specs: {opp['alternative_specs']}"
+                            )
+
+                    # Calculate selected savings
+                    selected_count = len(st.session_state.selected_optimizations)
+                    selected_savings = sum(
+                        savings_summary['opportunities'][idx]['monthly_savings']
+                        for idx in st.session_state.selected_optimizations
+                    )
+
+                    st.markdown("---")
+                    st.markdown(f"**Selected:** {selected_count} optimizations | **Potential Savings:** ${selected_savings:,.2f}/mo")
+
+                    # Apply Selected button
+                    if selected_count > 0:
+                        if st.button("🚀 Apply Selected Optimizations", type="primary"):
+                            st.session_state.applied_optimizations = st.session_state.selected_optimizations.copy()
+                            st.session_state.show_transformed = True
+
+                    # Show transformed results if applied
+                    if st.session_state.show_transformed and st.session_state.applied_optimizations:
+                        st.markdown("---")
+                        st.subheader("✅ Applied Optimizations Preview")
+
+                        # Create transformed dataframe
+                        transformed_df = result_df.copy()
+                        applied_map = {
+                            savings_summary['opportunities'][idx]['row_index']: savings_summary['opportunities'][idx]
+                            for idx in st.session_state.applied_optimizations
                         }
-                        for opp in savings_summary['opportunities']
-                    ])
-                    st.dataframe(savings_df, use_container_width=True, height=400)
-                    
+
+                        for idx, row in transformed_df.iterrows():
+                            if idx in applied_map:
+                                opp = applied_map[idx]
+                                transformed_df.at[idx, 'Mapped Flavor'] = opp['recommended_flavor']
+                                transformed_df.at[idx, 'Flavor Family'] = opp.get('recommended_family', 'N/A')
+                                new_compute_cost = opp['recommended_cost'] / row.get('Quantity', 1)
+                                transformed_df.at[idx, 'Compute Cost (Monthly)'] = new_compute_cost
+                                storage_cost = row.get('Storage Cost (Monthly)', 0)
+                                transformed_df.at[idx, 'Total Cost per Instance'] = new_compute_cost + storage_cost
+                                transformed_df.at[idx, 'Total Cost for Quantity'] = (new_compute_cost + storage_cost) * row.get('Quantity', 1)
+
+                        # Show metrics
+                        new_total = transformed_df['Total Cost for Quantity'].sum()
+                        original_total = result_df['Total Cost for Quantity'].sum()
+                        actual_savings = original_total - new_total
+
+                        met_col1, met_col2, met_col3 = st.columns(3)
+                        with met_col1:
+                            st.metric("Original Total", f"${original_total:,.2f}")
+                        with met_col2:
+                            st.metric("With Optimizations", f"${new_total:,.2f}", delta=f"-${actual_savings:,.2f}")
+                        with met_col3:
+                            st.metric("Applied Count", f"{len(st.session_state.applied_optimizations)}")
+
+                        # Show comparison table
+                        with st.expander("📋 View Transformation Details"):
+                            comparison_data = []
+                            for idx in st.session_state.applied_optimizations:
+                                opp = savings_summary['opportunities'][idx]
+                                comparison_data.append({
+                                    'Resource': f"Row {opp['row_index'] + 1}",
+                                    'Type': opp['resource_type'],
+                                    'Original': opp['current_flavor'],
+                                    'New': opp['recommended_flavor'],
+                                    'Savings': f"${opp['monthly_savings']:,.2f}/mo"
+                                })
+
+                            comp_df = pd.DataFrame(comparison_data)
+                            st.dataframe(comp_df, use_container_width=True)
+
+                        # Download button for selective optimization
+                        st.markdown("#### 📥 Download Selectively Optimized Quote")
+                        sel_output = BytesIO()
+
+                        # Create summary for selected optimizations
+                        sel_summary = {
+                            'total_current_monthly': original_total,
+                            'total_current_yearly': original_total * 12,
+                            'total_optimized_monthly': new_total,
+                            'total_optimized_yearly': new_total * 12,
+                            'total_monthly_savings': actual_savings,
+                            'total_yearly_savings': actual_savings * 12,
+                            'savings_percent': (actual_savings / original_total * 100) if original_total > 0 else 0,
+                            'opportunities_count': len(st.session_state.applied_optimizations),
+                            'opportunities': [savings_summary['opportunities'][idx] for idx in st.session_state.applied_optimizations]
+                        }
+
+                        create_optimized_excel(transformed_df, sel_summary, summary, sel_output)
+                        sel_output.seek(0)
+                        st.download_button(
+                            label="💾 Download Optimized Quote",
+                            data=sel_output.getvalue(),
+                            file_name="huawei_cloud_selective_optimized.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+
                     st.markdown("---")
                 
                 st.subheader("💰 Cost Summary")
