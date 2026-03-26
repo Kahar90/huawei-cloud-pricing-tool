@@ -332,35 +332,237 @@ def render_getting_started_tab():
 
 def render_llm_guide_tab():
     st.markdown("## 🤖 Using AI to Fill Your Template")
-    st.markdown("Learn how to leverage ChatGPT, Claude, Gemini, or other AI assistants to quickly populate your template.")
+    st.markdown("Let ChatGPT, Claude, or your favorite AI assistant do the work! Copy these prompts and get perfectly formatted template data in seconds.")
     st.markdown("---")
     
-    st.info("🚧 **Coming in Phase 2** — This tab will contain:")
-    st.markdown("""
-    - Ready-to-use prompt templates for ChatGPT/Claude
-    - Step-by-step guide for converting natural language to structured data
-    - Example conversations showing AI-assisted template filling
-    - Tips for getting the best results from AI assistants
-    """)
+    # Master Prompt Section
+    st.markdown("### 🎯 Master Prompt (Use This First)")
+    st.markdown("This universal prompt works for any infrastructure setup. Copy it and paste into ChatGPT, Claude, or Gemini.")
+    
+    master_prompt = """I need to create a Huawei Cloud resource inventory. Convert my infrastructure requirements into a table with these EXACT columns:
+
+REQUIRED COLUMNS:
+• Resource Type: ECS (Virtual Machine), Database (RDS), or OSS (Object Storage)
+• vCPUs: Number of virtual CPUs (set to 0 for OSS)
+• RAM (GB): Memory in gigabytes (set to 0 for OSS)
+• Storage (GB): Storage size in gigabytes
+• Storage Type: For ECS/Database use SSD, HighIO, UltraHighIO, GeneralSSDv2, or ExtremeSSD. For OSS use Standard, InfrequentAccess, Archive, or DeepArchive
+• Quantity: Number of instances (default: 1)
+
+OPTIONAL COLUMNS (include if relevant):
+• Desired Tier (ECS only): general-computing-plus, general-computing-basic, memory-optimized, disk-intensive, or large-memory
+• DB Type (Database only): mysql or postgresql
+• Deployment (Database only): single or ha (High Availability)
+• Availability Zone (OSS only): single-az or multi-az
+• Requests Read (OSS only): Number of read requests per month
+• Requests Write (OSS only): Number of write requests per month
+• Requests Delete (OSS only): Number of delete requests per month
+• Data Retrieval GB (OSS only): Data retrieval volume in GB per month
+• Retrieval Type (OSS only): Standard, Urgent, or DirectReading
+• Internet Outbound GB (OSS only): Internet outbound traffic in GB per month
+
+MY INFRASTRUCTURE REQUIREMENTS:
+[PASTE YOUR REQUIREMENTS HERE - Example: "I need 3 web servers with 4 CPU, 16GB RAM, 200GB SSD each, and one PostgreSQL database with 8 CPU, 32GB RAM, 500GB storage in HA mode"]
+
+INSTRUCTIONS FOR AI:
+1. Create one row per resource instance
+2. Use exact column names as shown above
+3. For ECS and Database: vCPUs and RAM must be greater than 0
+4. For OSS: Set vCPUs and RAM to 0
+5. Choose appropriate Storage Type based on performance needs
+6. Include all optional columns that are relevant
+7. Return as a markdown table that can be copied into Excel
+
+OUTPUT FORMAT:
+Return a markdown table with headers matching the column names above."""
+    
+    st.code(master_prompt, language="text")
+    
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.button("📋 Copy Master Prompt", key="copy_master", on_click=lambda: st.write("Copied! (Use Ctrl+C to copy from the code block above)"))
+    with col2:
+        st.info("💡 **Pro Tip:** Replace the text in brackets [PASTE YOUR REQUIREMENTS HERE] with your actual infrastructure needs before sending to AI.")
     
     st.markdown("---")
-    st.markdown("### Quick Preview")
+    
+    # Resource-Specific Prompts
+    st.markdown("### 🎯 Resource-Specific Prompts")
+    st.markdown("Use these specialized prompts when you only need one type of resource.")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("**🖥️ ECS (Virtual Machines)**")
+        ecs_prompt = """Create Huawei Cloud ECS (virtual machine) specifications.
+
+Required fields:
+- Resource Type: ECS
+- vCPUs: [number]
+- RAM (GB): [number]
+- Storage (GB): [number]
+- Storage Type: [SSD/HighIO/UltraHighIO/GeneralSSDv2/ExtremeSSD]
+- Quantity: [number]
+
+Optional:
+- Desired Tier: [general-computing-plus/memory-optimized/disk-intensive/large-memory]
+
+My requirements: [DESCRIBE YOUR VM NEEDS]
+
+Return as a markdown table."""
+        st.code(ecs_prompt, language="text")
+        st.caption("Example: \"I need 2 web servers with 4 CPU, 16GB RAM, 200GB SSD\"")
+    
+    with col2:
+        st.markdown("**🗄️ Database (RDS)**")
+        db_prompt = """Create Huawei Cloud Database (RDS) specifications.
+
+Required fields:
+- Resource Type: Database
+- vCPUs: [number]
+- RAM (GB): [number]
+- Storage (GB): [number]
+- Storage Type: [SSD/HighIO/UltraHighIO/GeneralSSDv2/ExtremeSSD]
+- DB Type: [mysql/postgresql]
+- Deployment: [single/ha]
+- Quantity: [number]
+
+My requirements: [DESCRIBE YOUR DATABASE NEEDS]
+
+Return as a markdown table."""
+        st.code(db_prompt, language="text")
+        st.caption("Example: \"One PostgreSQL database with 8 CPU, 32GB RAM, 500GB in HA mode\"")
+    
+    with col3:
+        st.markdown("**📦 Object Storage (OSS)**")
+        oss_prompt = """Create Huawei Cloud OSS (object storage) specifications.
+
+Required fields:
+- Resource Type: OSS
+- vCPUs: 0
+- RAM (GB): 0
+- Storage (GB): [number]
+- Storage Type: [Standard/InfrequentAccess/Archive/DeepArchive]
+- Requests Read: [number per month]
+- Requests Write: [number per month]
+- Internet Outbound GB: [number per month]
+- Quantity: 1
+
+Optional:
+- Availability Zone: [single-az/multi-az]
+- Requests Delete: [number per month]
+
+My requirements: [DESCRIBE YOUR STORAGE NEEDS]
+
+Return as a markdown table."""
+        st.code(oss_prompt, language="text")
+        st.caption("Example: \"1000GB Standard storage, 10000 reads, 5000 writes per month\"")
+    
+    st.markdown("---")
+    
+    # Example Conversations
+    st.markdown("### 💬 Example Conversations")
+    st.markdown("See how real users leverage AI to fill their templates:")
+    
+    with st.expander("📖 Example 1: Web Application Infrastructure"):
+        st.markdown("""
+        **User:** I need infrastructure for a web application:
+        - 2 web servers with 4 CPU, 16GB RAM, 200GB SSD each
+        - 1 API server with 8 CPU, 32GB RAM, 400GB SSD
+        - 1 MySQL database with 4 CPU, 16GB RAM, 500GB storage in HA mode
+        - 500GB object storage for user uploads, about 5000 reads and 2000 writes per month
+        
+        **AI Output:**
+        ```
+        | Resource Type | vCPUs | RAM (GB) | Storage (GB) | Storage Type | DB Type | Deployment | Availability Zone | Requests Read | Requests Write | Internet Outbound GB | Quantity | Desired Tier |
+        |---------------|-------|----------|--------------|--------------|---------|------------|-------------------|---------------|----------------|---------------------|----------|--------------|
+        | ECS | 4 | 16 | 200 | SSD | | | | | | | 2 | general-computing-plus |
+        | ECS | 8 | 32 | 400 | SSD | | | | | | | 1 | general-computing-plus |
+        | Database | 4 | 16 | 500 | SSD | mysql | ha | | | | | 1 | |
+        | OSS | 0 | 0 | 500 | Standard | | | single-az | 5000 | 2000 | 100 | 1 | |
+        ```
+        
+        **✅ Result:** User copies this table into the Excel template and uploads it. Done!
+        """)
+    
+    with st.expander("📖 Example 2: Enterprise Database Migration"):
+        st.markdown("""
+        **User:** We're migrating our enterprise databases to Huawei Cloud:
+        - Primary PostgreSQL: 16 CPU, 64GB RAM, 2TB storage, needs to be highly available
+        - Reporting MySQL: 8 CPU, 32GB RAM, 1TB storage, single instance is fine
+        - Archive storage: 5TB for old data, rarely accessed, maybe 100 retrieval requests per month
+        
+        **AI Output:**
+        ```
+        | Resource Type | vCPUs | RAM (GB) | Storage (GB) | Storage Type | DB Type | Deployment | Availability Zone | Requests Read | Requests Write | Internet Outbound GB | Quantity | Desired Tier |
+        |---------------|-------|----------|--------------|--------------|---------|------------|-------------------|---------------|----------------|---------------------|----------|--------------|
+        | Database | 16 | 64 | 2048 | UltraHighIO | postgresql | ha | | | | | 1 | |
+        | Database | 8 | 32 | 1024 | SSD | mysql | single | | | | | 1 | |
+        | OSS | 0 | 0 | 5120 | Archive | | | single-az | 0 | 0 | 100 | 1 | |
+        ```
+        
+        **✅ Result:** AI correctly identified UltraHighIO for the primary database and Archive storage for the old data!
+        """)
+    
+    with st.expander("📖 Example 3: Simple Starter Setup"):
+        st.markdown("""
+        **User:** Just starting out, need basic setup:
+        - 1 small server for a WordPress site
+        - Basic database for the WordPress
+        
+        **AI Output:**
+        ```
+        | Resource Type | vCPUs | RAM (GB) | Storage (GB) | Storage Type | DB Type | Deployment | Quantity | Desired Tier |
+        |---------------|-------|----------|--------------|--------------|---------|------------|----------|--------------|
+        | ECS | 2 | 8 | 100 | SSD | | | 1 | general-computing-basic |
+        | Database | 2 | 8 | 200 | SSD | mysql | single | 1 | |
+        ```
+        
+        **✅ Result:** AI chose conservative specs appropriate for a starter WordPress site!
+        """)
+    
+    st.markdown("---")
+    
+    # Tips Section
+    st.markdown("### 💡 Pro Tips for Best Results")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**✅ DO:**")
+        st.markdown("""
+        - Be specific: "3 servers" → "3 web servers with 4 CPU, 16GB RAM each"
+        - Include quantities for everything
+        - Mention performance needs: "fast storage" → "UltraHighIO"
+        - Specify database type: MySQL or PostgreSQL
+        - Mention if you need HA (High Availability) for databases
+        - Ask AI to "return as a markdown table"
+        """)
+    
+    with col2:
+        st.markdown("**❌ AVOID:**")
+        st.markdown("""
+        - Vague terms: "some servers", "a few databases"
+        - Ambiguous specs: "medium size", "fast enough"
+        - Mixing requirements: "2 servers with different specs" (list them separately)
+        - Forgetting units: "16GB memory" → "16GB RAM"
+        - Unclear storage needs: "lots of storage" → "2TB"
+        """)
+    
+    st.markdown("---")
+    
+    # Workflow Summary
+    st.markdown("### 🔄 Quick Workflow Reminder")
     st.markdown("""
-    **The basic workflow will be:**
-    
-    1. **Copy our optimized prompt** from this tab
-    2. **Paste into ChatGPT/Claude** with your requirements
-    3. **Get a perfectly formatted table** ready for the template
-    4. **Copy-paste into Excel** and upload!
-    
-    **Example:**
-    
-    *You:* "I need 2 web servers with 4 CPU, 16GB RAM, 200GB SSD each, plus a PostgreSQL database with 8 CPU, 32GB RAM in HA mode"
-    
-    *AI:* Generates a table with all required columns filled correctly
-    
-    No more guessing column names or valid values!
+    1. **Copy the master prompt** from above
+    2. **Paste into ChatGPT/Claude** (or your preferred AI)
+    3. **Add your requirements** where it says [PASTE YOUR REQUIREMENTS HERE]
+    4. **Get back a formatted table** from the AI
+    5. **Copy the table** and paste into the Excel template
+    6. **Upload to the Calculator tab** and get your pricing!
     """)
+    
+    st.success("🎉 That's it! No more struggling with column names or valid values — let AI handle the formatting while you focus on your infrastructure needs.")
 
 
 def main():
