@@ -19,7 +19,7 @@ REQUIRED_COLUMNS = [
 
 def create_standard_template() -> pd.DataFrame:
     data = {
-        'Resource Type': ['ECS', 'ECS', 'Database', 'ECS', 'Database', 'OSS'],
+        'Resource Type': ['ECS', 'ECS', 'Database', 'ECS', 'Database', 'OBS'],
         'vCPUs': [2, 4, 4, 8, 2, 0],
         'RAM (GB)': [8, 16, 16, 32, 8, 0],
         'Storage (GB)': [100, 200, 500, 400, 100, 1000],
@@ -49,12 +49,12 @@ def validate_row(row: pd.Series, row_num: int) -> Tuple[bool, List[str]]:
     
     # Check Resource Type
     if not resource_type:
-        errors.append(f"Row {row_num}: Resource Type is empty. Must be one of: ECS, Database, OSS")
-    elif resource_type not in ['ECS', 'Database', 'OSS']:
-        errors.append(f"Row {row_num}: Invalid Resource Type '{resource_type}'. Valid values: ECS, Database, OSS")
+        errors.append(f"Row {row_num}: Resource Type is empty. Must be one of: ECS, Database, OBS")
+    elif resource_type not in ['ECS', 'Database', 'OBS']:
+        errors.append(f"Row {row_num}: Invalid Resource Type '{resource_type}'. Valid values: ECS, Database, OBS")
     
     # Check numeric values based on resource type
-    if resource_type and resource_type != 'OSS':
+    if resource_type and resource_type != 'OBS':
         vcpus = row.get('vCPUs')
         if pd.isna(vcpus) or str(vcpus).strip() == '':
             errors.append(f"Row {row_num}: vCPUs is required for {resource_type} resources")
@@ -96,10 +96,10 @@ def validate_row(row: pd.Series, row_num: int) -> Tuple[bool, List[str]]:
     else:
         stype_lower = stype.lower().replace('-', '').replace(' ', '').replace('_', '')
         
-        if resource_type == 'OSS':
+        if resource_type == 'OBS':
             valid_oss = ['standard', 'infrequentaccess', 'archive', 'deeparchive']
             if stype_lower not in valid_oss:
-                errors.append(f"Row {row_num}: Invalid OSS Storage Class '{stype}'. Valid: Standard, InfrequentAccess, Archive, DeepArchive")
+                errors.append(f"Row {row_num}: Invalid OBS Storage Class '{stype}'. Valid: Standard, InfrequentAccess, Archive, DeepArchive")
         else:
             valid_block = ['ssd', 'highio', 'ultrahighio', 'generalssdv2', 'extremessd', 'generalpurposessd']
             if stype_lower not in valid_block:
@@ -208,7 +208,7 @@ def to_excel_bytes(df: pd.DataFrame, summary: Dict) -> bytes:
 
 def create_enhanced_template() -> pd.DataFrame:
     data = {
-        'Resource Type': ['ECS', 'ECS', 'Database', 'ECS', 'Database', 'OSS'],
+        'Resource Type': ['ECS', 'ECS', 'Database', 'ECS', 'Database', 'OBS'],
         'vCPUs': [2, 4, 4, 8, 2, 0],
         'RAM (GB)': [8, 16, 16, 32, 8, 0],
         'Storage (GB)': [100, 200, 500, 400, 100, 1000],
@@ -231,23 +231,23 @@ def create_enhanced_template() -> pd.DataFrame:
 
 def get_column_descriptions() -> Dict[str, str]:
     return {
-        'Resource Type': 'Type of cloud resource: ECS (Virtual Machine), Database (RDS), or OSS (Object Storage)',
-        'vCPUs': 'Number of virtual CPUs. Required for ECS and Database. Set to 0 for OSS.',
-        'RAM (GB)': 'Memory in gigabytes. Required for ECS and Database. Set to 0 for OSS.',
+        'Resource Type': 'Type of cloud resource: ECS (Virtual Machine), Database (RDS), or OBS (Object Storage)',
+        'vCPUs': 'Number of virtual CPUs. Required for ECS and Database. Set to 0 for OBS.',
+        'RAM (GB)': 'Memory in gigabytes. Required for ECS and Database. Set to 0 for OBS.',
         'Storage (GB)': 'Storage size in gigabytes. Required for all resource types.',
-        'Storage Type': 'Storage class: SSD/HighIO/UltraHighIO/GeneralSSDv2/ExtremeSSD for ECS/DB; Standard/InfrequentAccess/Archive/DeepArchive for OSS',
+        'Storage Type': 'Storage class: SSD/HighIO/UltraHighIO/GeneralSSDv2/ExtremeSSD for ECS/DB; Standard/InfrequentAccess/Archive/DeepArchive for OBS',
         'Region': 'Huawei Cloud region. Currently locked to ap-southeast-3 (AP-Jakarta).',
         'Quantity': 'Number of instances. Default: 1.',
         'Desired Tier': 'ECS flavor family preference: general-computing-plus, general-computing-basic, memory-optimized, disk-intensive, large-memory',
         'DB Type': 'Database engine: mysql or postgresql. Only required for Database resources.',
         'Deployment': 'Database deployment mode: single or ha (High Availability). Only for Database resources.',
-        'Availability Zone': 'OSS availability zone type: single-az or multi-az. Only for OSS resources.',
-        'Requests Read': 'Number of read requests per month. Only for OSS resources.',
-        'Requests Write': 'Number of write requests per month. Only for OSS resources.',
-        'Requests Delete': 'Number of delete requests per month. Only for OSS resources.',
-        'Data Retrieval GB': 'Data retrieval volume in GB per month. Only for Archive/DeepArchive OSS.',
-        'Retrieval Type': 'Archive retrieval type: Standard, Urgent, or DirectReading. Only for archived OSS data.',
-        'Internet Outbound GB': 'Internet outbound traffic in GB per month. Only for OSS resources.'
+        'Availability Zone': 'OBS availability zone type: single-az or multi-az. Only for OBS resources.',
+        'Requests Read': 'Number of read requests per month. Only for OBS resources.',
+        'Requests Write': 'Number of write requests per month. Only for OBS resources.',
+        'Requests Delete': 'Number of delete requests per month. Only for OBS resources.',
+        'Data Retrieval GB': 'Data retrieval volume in GB per month. Only for Archive/DeepArchive OBS.',
+        'Retrieval Type': 'Archive retrieval type: Standard, Urgent, or DirectReading. Only for archived OBS data.',
+        'Internet Outbound GB': 'Internet outbound traffic in GB per month. Only for OBS resources.'
     }
 
 
@@ -278,7 +278,7 @@ def render_getting_started_tab():
         )
     
     with col2:
-        st.info("💡 The template includes example rows for ECS (virtual machines), Database (RDS), and OSS (object storage). You can delete the examples and replace them with your actual requirements.")
+        st.info("💡 The template includes example rows for ECS (virtual machines), Database (RDS), and OBS (object storage). You can delete the examples and replace them with your actual requirements.")
     
     st.markdown("---")
     
@@ -322,10 +322,10 @@ def render_getting_started_tab():
         - Required fields: All ECS fields + DB Type (mysql/postgresql), Deployment (single/ha)
         - Example: 4 vCPUs, 16 GB RAM, 500 GB UltraHighIO, MySQL, HA mode
         
-        **📦 OSS (Object Storage Service)** — Cloud Storage
+        **📦 OBS (Object Storage Service)** — Cloud Storage
         - Use for: File storage, backups, static assets
         - Required fields: Resource Type, Storage (GB), Storage Type, Requests Read/Write/Delete, Internet Outbound GB
-        - vCPUs and RAM should be 0 for OSS
+        - vCPUs and RAM should be 0 for OBS
         - Example: 1000 GB Standard storage, 10000 read requests, 5000 write requests
         """)
 
@@ -342,24 +342,24 @@ def render_llm_guide_tab():
     master_prompt = """I need to create a Huawei Cloud resource inventory. Convert my infrastructure requirements into a table with these EXACT columns:
 
 REQUIRED COLUMNS:
-• Resource Type: ECS (Virtual Machine), Database (RDS), or OSS (Object Storage)
-• vCPUs: Number of virtual CPUs (set to 0 for OSS)
-• RAM (GB): Memory in gigabytes (set to 0 for OSS)
+• Resource Type: ECS (Virtual Machine), Database (RDS), or OBS (Object Storage)
+• vCPUs: Number of virtual CPUs (set to 0 for OBS)
+• RAM (GB): Memory in gigabytes (set to 0 for OBS)
 • Storage (GB): Storage size in gigabytes
-• Storage Type: For ECS/Database use SSD, HighIO, UltraHighIO, GeneralSSDv2, or ExtremeSSD. For OSS use Standard, InfrequentAccess, Archive, or DeepArchive
+• Storage Type: For ECS/Database use SSD, HighIO, UltraHighIO, GeneralSSDv2, or ExtremeSSD. For OBS use Standard, InfrequentAccess, Archive, or DeepArchive
 • Quantity: Number of instances (default: 1)
 
 OPTIONAL COLUMNS (include if relevant):
 • Desired Tier (ECS only): general-computing-plus, general-computing-basic, memory-optimized, disk-intensive, or large-memory
 • DB Type (Database only): mysql or postgresql
 • Deployment (Database only): single or ha (High Availability)
-• Availability Zone (OSS only): single-az or multi-az
-• Requests Read (OSS only): Number of read requests per month
-• Requests Write (OSS only): Number of write requests per month
-• Requests Delete (OSS only): Number of delete requests per month
-• Data Retrieval GB (OSS only): Data retrieval volume in GB per month
-• Retrieval Type (OSS only): Standard, Urgent, or DirectReading
-• Internet Outbound GB (OSS only): Internet outbound traffic in GB per month
+• Availability Zone (OBS only): single-az or multi-az
+• Requests Read (OBS only): Number of read requests per month
+• Requests Write (OBS only): Number of write requests per month
+• Requests Delete (OBS only): Number of delete requests per month
+• Data Retrieval GB (OBS only): Data retrieval volume in GB per month
+• Retrieval Type (OBS only): Standard, Urgent, or DirectReading
+• Internet Outbound GB (OBS only): Internet outbound traffic in GB per month
 
 MY INFRASTRUCTURE REQUIREMENTS:
 [PASTE YOUR REQUIREMENTS HERE - Example: "I need 3 web servers with 4 CPU, 16GB RAM, 200GB SSD each, and one PostgreSQL database with 8 CPU, 32GB RAM, 500GB storage in HA mode"]
@@ -368,7 +368,7 @@ INSTRUCTIONS FOR AI:
 1. Create one row per resource instance
 2. Use exact column names as shown above
 3. For ECS and Database: vCPUs and RAM must be greater than 0
-4. For OSS: Set vCPUs and RAM to 0
+4. For OBS: Set vCPUs and RAM to 0
 5. Choose appropriate Storage Type based on performance needs
 6. Include all optional columns that are relevant
 7. Return as a markdown table that can be copied into Excel
@@ -434,11 +434,11 @@ Return as a markdown table."""
         st.caption("Example: \"One PostgreSQL database with 8 CPU, 32GB RAM, 500GB in HA mode\"")
     
     with col3:
-        st.markdown("**📦 Object Storage (OSS)**")
-        oss_prompt = """Create Huawei Cloud OSS (object storage) specifications.
+        st.markdown("**📦 Object Storage (OBS)**")
+        oss_prompt = """Create Huawei Cloud OBS (object storage) specifications.
 
 Required fields:
-- Resource Type: OSS
+- Resource Type: OBS
 - vCPUs: 0
 - RAM (GB): 0
 - Storage (GB): [number]
@@ -479,7 +479,7 @@ Return as a markdown table."""
         | ECS | 4 | 16 | 200 | SSD | | | | | | | 2 | general-computing-plus |
         | ECS | 8 | 32 | 400 | SSD | | | | | | | 1 | general-computing-plus |
         | Database | 4 | 16 | 500 | SSD | mysql | ha | | | | | 1 | |
-        | OSS | 0 | 0 | 500 | Standard | | | single-az | 5000 | 2000 | 100 | 1 | |
+        | OBS | 0 | 0 | 500 | Standard | | | single-az | 5000 | 2000 | 100 | 1 | |
         ```
         
         **✅ Result:** User copies this table into the Excel template and uploads it. Done!
@@ -498,7 +498,7 @@ Return as a markdown table."""
         |---------------|-------|----------|--------------|--------------|---------|------------|-------------------|---------------|----------------|---------------------|----------|--------------|
         | Database | 16 | 64 | 2048 | UltraHighIO | postgresql | ha | | | | | 1 | |
         | Database | 8 | 32 | 1024 | SSD | mysql | single | | | | | 1 | |
-        | OSS | 0 | 0 | 5120 | Archive | | | single-az | 0 | 0 | 100 | 1 | |
+        | OBS | 0 | 0 | 5120 | Archive | | | single-az | 0 | 0 | 100 | 1 | |
         ```
         
         **✅ Result:** AI correctly identified UltraHighIO for the primary database and Archive storage for the old data!
@@ -1131,24 +1131,24 @@ def render_calculator_tab(ecs_data, db_data, storage_data, oss_data, available_d
     else:
         st.info("👆 Please upload an Excel file to begin.")
         st.markdown("### Required Columns:")
-        st.markdown("- **Resource Type**: ECS, Database, or OSS")
+        st.markdown("- **Resource Type**: ECS, Database, or OBS")
         st.markdown("- **vCPUs**: Number of virtual CPUs")
         st.markdown("- **RAM (GB)**: Memory in gigabytes")
         st.markdown("- **Storage (GB)**: Storage size in gigabytes")
-        st.markdown("- **Storage Type**: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD (ECS/DB) or Standard, InfrequentAccess, Archive, DeepArchive (OSS)")
+        st.markdown("- **Storage Type**: SSD, HighIO, UltraHighIO, GeneralSSDv2, ExtremeSSD (ECS/DB) or Standard, InfrequentAccess, Archive, DeepArchive (OBS)")
         st.markdown("- **Quantity**: Number of instances (default: 1)")
         st.markdown("---")
         st.markdown("### Optional Columns:")
         st.markdown("- **Desired Tier** *(ECS only)*: general-computing-plus, general-computing-basic, memory-optimized, disk-intensive, large-memory")
         st.markdown("- **DB Type** *(Database only)*: mysql, postgresql")
         st.markdown("- **Deployment** *(Database only)*: single or ha")
-        st.markdown("- **Availability Zone** *(OSS only)*: single-az or multi-az")
-        st.markdown("- **Requests Read** *(OSS only)*: Number of read requests")
-        st.markdown("- **Requests Write** *(OSS only)*: Number of write requests")
-        st.markdown("- **Requests Delete** *(OSS only)*: Number of delete requests")
-        st.markdown("- **Data Retrieval GB** *(OSS only)*: Data retrieval volume in GB")
-        st.markdown("- **Retrieval Type** *(OSS only)*: Standard, Urgent, DirectReading")
-        st.markdown("- **Internet Outbound GB** *(OSS only)*: Internet outbound traffic in GB")
+        st.markdown("- **Availability Zone** *(OBS only)*: single-az or multi-az")
+        st.markdown("- **Requests Read** *(OBS only)*: Number of read requests")
+        st.markdown("- **Requests Write** *(OBS only)*: Number of write requests")
+        st.markdown("- **Requests Delete** *(OBS only)*: Number of delete requests")
+        st.markdown("- **Data Retrieval GB** *(OBS only)*: Data retrieval volume in GB")
+        st.markdown("- **Retrieval Type** *(OBS only)*: Standard, Urgent, DirectReading")
+        st.markdown("- **Internet Outbound GB** *(OBS only)*: Internet outbound traffic in GB")
 
 if __name__ == "__main__":
     main()

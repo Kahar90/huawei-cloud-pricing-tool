@@ -11,7 +11,7 @@ A Python script that generates comprehensive test Excel files with various confi
 
 - **ECS entries (20)**: Various flavors, storage types, and quantities
 - **Database entries (20)**: MySQL and PostgreSQL with single and HA deployments
-- **OSS entries (10)**: Different storage classes, AZ types, and access patterns
+- **OBS entries (10)**: Different storage classes, AZ types, and access patterns
 
 ### Generated Test Files
 Test files are named with timestamps: `comprehensive_test_YYYYMMDD_HHMMSS.xlsx`
@@ -55,7 +55,7 @@ This will create a new Excel file in the `tests/` directory with randomized test
 - Various sizes (2-16 vCPUs, 4-64 GB RAM)
 - Different storage configurations
 
-### OSS Test Cases
+### OBS Test Cases
 - Storage classes: Standard, InfrequentAccess, Archive, DeepArchive
 - AZ types: single-az, multi-az
 - Various request patterns (reads, writes, deletes)

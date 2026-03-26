@@ -141,7 +141,7 @@ def map_resource(
             return None, f"Unknown DB Type: {db_type}"
         return find_best_db_flavor(vcpus, ram_gb, db_flavors)
     elif resource_lower == 'oss':
-        return None, "N/A - OSS uses storage class pricing"
+        return None, "N/A - OBS uses storage class pricing"
     else:
         return None, "Unknown Resource Type"
 
@@ -157,7 +157,7 @@ def map_resources(
     ecs_flavors = get_ecs_flavors(ecs_data)
     for _, row in df.iterrows():
         resource_type = str(row.get('Resource Type', 'ECS')).strip()
-        # Handle vCPUs and RAM - OSS resources don't have these
+        # Handle vCPUs and RAM - OBS resources don't have these
         if resource_type.lower() == 'oss':
             vcpus = 0
             ram_gb = 0
