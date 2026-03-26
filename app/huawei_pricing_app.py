@@ -382,6 +382,43 @@ def main():
 
                 st.markdown("---")
 
+                # Cost Summary (Non-optimized - shown first)
+                st.subheader("💰 Cost Summary")
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Total Monthly Cost", f"${summary['total_monthly_cost']:,.2f}")
+                with col2:
+                    st.metric("Total Yearly Cost", f"${summary['total_yearly_cost']:,.2f}")
+                with col3:
+                    st.metric("Total Instances", summary['total_instances'])
+                with col4:
+                    st.metric("Needs Review", summary['needs_review_count'])
+
+                # Cost Breakdown Visualization
+                st.markdown("---")
+                with st.expander("📈 Cost Breakdown Visualization", expanded=True):
+                    viz_col1, viz_col2 = st.columns(2)
+
+                    with viz_col1:
+                        st.markdown("**Cost by Resource Type**")
+                        cost_by_type = result_df.groupby('Resource Type')['Total Cost for Quantity'].sum().reset_index()
+                        st.bar_chart(cost_by_type.set_index('Resource Type'))
+
+                    with viz_col2:
+                        st.markdown("**Instance Count by Type**")
+                        count_by_type = result_df.groupby('Resource Type')['Quantity'].sum().reset_index()
+                        st.bar_chart(count_by_type.set_index('Resource Type'))
+
+                    # Top 10 most expensive resources
+                    st.markdown("**Top 10 Most Expensive Resources**")
+                    top_expensive = result_df.nlargest(10, 'Total Cost for Quantity')[
+                        ['Resource Type', 'Mapped Flavor', 'vCPUs', 'RAM (GB)', 'Total Cost for Quantity']
+                    ]
+                    top_expensive['Total Cost'] = top_expensive['Total Cost for Quantity'].apply(lambda x: f"${x:,.2f}")
+                    st.dataframe(top_expensive[['Resource Type', 'Mapped Flavor', 'vCPUs', 'RAM (GB)', 'Total Cost']], use_container_width=True)
+
+                st.markdown("---")
+
                 # Display X-Mode Preview if enabled
                 if x_mode_enabled and x_family:
                     st.subheader("🚀 X-Mode Transformation Preview")
@@ -681,40 +718,6 @@ def main():
 
                     st.markdown("---")
                 
-                st.subheader("💰 Cost Summary")
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Total Monthly Cost", f"${summary['total_monthly_cost']:,.2f}")
-                with col2:
-                    st.metric("Total Yearly Cost", f"${summary['total_yearly_cost']:,.2f}")
-                with col3:
-                    st.metric("Total Instances", summary['total_instances'])
-                with col4:
-                    st.metric("Needs Review", summary['needs_review_count'])
-
-                # Cost Breakdown Visualization
-                st.markdown("---")
-                with st.expander("📈 Cost Breakdown Visualization", expanded=True):
-                    viz_col1, viz_col2 = st.columns(2)
-
-                    with viz_col1:
-                        st.markdown("**Cost by Resource Type**")
-                        cost_by_type = result_df.groupby('Resource Type')['Total Cost for Quantity'].sum().reset_index()
-                        st.bar_chart(cost_by_type.set_index('Resource Type'))
-
-                    with viz_col2:
-                        st.markdown("**Instance Count by Type**")
-                        count_by_type = result_df.groupby('Resource Type')['Quantity'].sum().reset_index()
-                        st.bar_chart(count_by_type.set_index('Resource Type'))
-
-                    # Top 10 most expensive resources
-                    st.markdown("**Top 10 Most Expensive Resources**")
-                    top_expensive = result_df.nlargest(10, 'Total Cost for Quantity')[
-                        ['Resource Type', 'Mapped Flavor', 'vCPUs', 'RAM (GB)', 'Total Cost for Quantity']
-                    ]
-                    top_expensive['Total Cost'] = top_expensive['Total Cost for Quantity'].apply(lambda x: f"${x:,.2f}")
-                    st.dataframe(top_expensive[['Resource Type', 'Mapped Flavor', 'vCPUs', 'RAM (GB)', 'Total Cost']], use_container_width=True)
-
                 st.markdown("---")
                 st.subheader("📊 Detailed Results")
                 st.dataframe(result_df, use_container_width=True)

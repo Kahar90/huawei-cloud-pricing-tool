@@ -137,9 +137,12 @@ def get_cost_savings_summary(
     Calculate total potential savings across all resources.
     Returns summary with total savings and per-resource breakdown.
     """
-    total_current_cost = 0
     total_potential_savings = 0
     savings_opportunities = []
+    
+    # Calculate total current cost from ALL resources (ECS + Database + OSS + Storage)
+    # This ensures consistency with the main calculation
+    total_current_cost = result_df['Total Cost for Quantity'].sum()
     
     for idx, row in result_df.iterrows():
         resource_type = str(row.get('Resource Type', '')).lower()
@@ -152,9 +155,6 @@ def get_cost_savings_summary(
             continue
             
         current_cost = row.get('Compute Cost (Monthly)', 0)
-        
-        # Track current cost for ALL resources (ECS, Database, OSS)
-        total_current_cost += current_cost
         
         if resource_type == 'ecs':
             alternatives = find_cheaper_ecs_alternatives(
