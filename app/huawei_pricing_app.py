@@ -461,27 +461,60 @@ def main():
                 # Display Cost Optimization Section if opportunities exist
                 if not x_mode_enabled and savings_summary['opportunities_count'] > 0:
                     st.subheader("💡 Cost Optimization Opportunities")
-                    st.info(f"Found **{savings_summary['opportunities_count']}** resources with potential savings!")
-
-                    # Show Current vs Optimized costs
-                    st.markdown("#### 📊 Pricing Comparison")
-                    comp_col1, comp_col2, comp_col3 = st.columns(3)
-                    with comp_col1:
-                        st.metric(
-                            "Current Total (Monthly)",
-                            f"${savings_summary['total_current_monthly']:,.2f}"
+                    
+                    # Check if optimizations have been applied
+                    if st.session_state.show_transformed and st.session_state.applied_optimizations:
+                        # Show ACTUAL applied results
+                        st.info(f"Applied **{len(st.session_state.applied_optimizations)}** of **{savings_summary['opportunities_count']}** available optimizations")
+                        
+                        # Recalculate totals based on ACTUAL applied optimizations
+                        applied_total_savings = sum(
+                            savings_summary['opportunities'][idx]['monthly_savings']
+                            for idx in st.session_state.applied_optimizations
                         )
-                    with comp_col2:
-                        st.metric(
-                            "Optimized Total (Monthly)",
-                            f"${savings_summary['total_optimized_monthly']:,.2f}",
-                            delta=f"-${savings_summary['total_monthly_savings']:,.2f} ({savings_summary['savings_percent']:.1f}%)"
-                        )
-                    with comp_col3:
-                        st.metric(
-                            "Total Savings (Yearly)",
-                            f"${savings_summary['total_yearly_savings']:,.2f}"
-                        )
+                        applied_optimized_cost = savings_summary['total_current_monthly'] - applied_total_savings
+                        applied_savings_percent = (applied_total_savings / savings_summary['total_current_monthly'] * 100) if savings_summary['total_current_monthly'] > 0 else 0
+                        
+                        st.markdown("#### 📊 Applied Optimization Results")
+                        comp_col1, comp_col2, comp_col3 = st.columns(3)
+                        with comp_col1:
+                            st.metric(
+                                "Current Total (Monthly)",
+                                f"${savings_summary['total_current_monthly']:,.2f}"
+                            )
+                        with comp_col2:
+                            st.metric(
+                                "With Applied Optimizations",
+                                f"${applied_optimized_cost:,.2f}",
+                                delta=f"-${applied_total_savings:,.2f} ({applied_savings_percent:.1f}%)"
+                            )
+                        with comp_col3:
+                            st.metric(
+                                "Applied Savings (Yearly)",
+                                f"${applied_total_savings * 12:,.2f}"
+                            )
+                    else:
+                        # Show POTENTIAL results (all optimizations)
+                        st.info(f"Found **{savings_summary['opportunities_count']}** resources with potential savings!")
+                        
+                        st.markdown("#### 📊 Potential Savings (All Optimizations)")
+                        comp_col1, comp_col2, comp_col3 = st.columns(3)
+                        with comp_col1:
+                            st.metric(
+                                "Current Total (Monthly)",
+                                f"${savings_summary['total_current_monthly']:,.2f}"
+                            )
+                        with comp_col2:
+                            st.metric(
+                                "Optimized Total (Monthly)",
+                                f"${savings_summary['total_optimized_monthly']:,.2f}",
+                                delta=f"-${savings_summary['total_monthly_savings']:,.2f} ({savings_summary['savings_percent']:.1f}%)"
+                            )
+                        with comp_col3:
+                            st.metric(
+                                "Total Savings (Yearly)",
+                                f"${savings_summary['total_yearly_savings']:,.2f}"
+                            )
 
                     # Selective Optimization UI
                     st.markdown("#### 🎯 Selective Optimization")
