@@ -205,6 +205,164 @@ def to_excel_bytes(df: pd.DataFrame, summary: Dict) -> bytes:
     output.seek(0)
     return output.getvalue()
 
+
+def create_enhanced_template() -> pd.DataFrame:
+    data = {
+        'Resource Type': ['ECS', 'ECS', 'Database', 'ECS', 'Database', 'OSS'],
+        'vCPUs': [2, 4, 4, 8, 2, 0],
+        'RAM (GB)': [8, 16, 16, 32, 8, 0],
+        'Storage (GB)': [100, 200, 500, 400, 100, 1000],
+        'Storage Type': ['SSD', 'HighIO', 'UltraHighIO', 'GeneralSSDv2', 'HighIO', 'Standard'],
+        'Region': [DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION, DEFAULT_REGION],
+        'Quantity': [1, 2, 1, 3, 1, 1],
+        'Desired Tier': ['general-computing-plus', 'general-computing-plus', '', 'memory-optimized', '', ''],
+        'DB Type': ['', '', 'mysql', '', 'postgresql', ''],
+        'Deployment': ['', '', 'single', '', 'ha', ''],
+        'Availability Zone': ['', '', '', '', '', 'single-az'],
+        'Requests Read': [0, 0, 0, 0, 0, 10000],
+        'Requests Write': [0, 0, 0, 0, 0, 5000],
+        'Requests Delete': [0, 0, 0, 0, 0, 1000],
+        'Data Retrieval GB': [0, 0, 0, 0, 0, 0],
+        'Retrieval Type': ['', '', '', '', '', ''],
+        'Internet Outbound GB': [0, 0, 0, 0, 0, 100]
+    }
+    return pd.DataFrame(data)
+
+
+def get_column_descriptions() -> Dict[str, str]:
+    return {
+        'Resource Type': 'Type of cloud resource: ECS (Virtual Machine), Database (RDS), or OSS (Object Storage)',
+        'vCPUs': 'Number of virtual CPUs. Required for ECS and Database. Set to 0 for OSS.',
+        'RAM (GB)': 'Memory in gigabytes. Required for ECS and Database. Set to 0 for OSS.',
+        'Storage (GB)': 'Storage size in gigabytes. Required for all resource types.',
+        'Storage Type': 'Storage class: SSD/HighIO/UltraHighIO/GeneralSSDv2/ExtremeSSD for ECS/DB; Standard/InfrequentAccess/Archive/DeepArchive for OSS',
+        'Region': 'Huawei Cloud region. Currently locked to ap-southeast-3 (AP-Jakarta).',
+        'Quantity': 'Number of instances. Default: 1.',
+        'Desired Tier': 'ECS flavor family preference: general-computing-plus, general-computing-basic, memory-optimized, disk-intensive, large-memory',
+        'DB Type': 'Database engine: mysql or postgresql. Only required for Database resources.',
+        'Deployment': 'Database deployment mode: single or ha (High Availability). Only for Database resources.',
+        'Availability Zone': 'OSS availability zone type: single-az or multi-az. Only for OSS resources.',
+        'Requests Read': 'Number of read requests per month. Only for OSS resources.',
+        'Requests Write': 'Number of write requests per month. Only for OSS resources.',
+        'Requests Delete': 'Number of delete requests per month. Only for OSS resources.',
+        'Data Retrieval GB': 'Data retrieval volume in GB per month. Only for Archive/DeepArchive OSS.',
+        'Retrieval Type': 'Archive retrieval type: Standard, Urgent, or DirectReading. Only for archived OSS data.',
+        'Internet Outbound GB': 'Internet outbound traffic in GB per month. Only for OSS resources.'
+    }
+
+
+def render_getting_started_tab():
+    st.markdown("## 🚀 Getting Started with Huawei Cloud Pricing")
+    st.markdown("Follow these 3 simple steps to calculate your cloud infrastructure costs:")
+    st.markdown("---")
+    
+    st.markdown("### Step 1: Download the Template")
+    st.markdown("Start with our pre-formatted Excel template. It includes examples for all resource types.")
+    
+    template_df = create_enhanced_template()
+    st.markdown("**Preview of what you'll get:**")
+    st.dataframe(template_df.head(3), use_container_width=True, hide_index=True)
+    
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            template_df.to_excel(writer, sheet_name='Resources', index=False)
+        output.seek(0)
+        st.download_button(
+            label="📥 Download Template",
+            data=output.getvalue(),
+            file_name="huawei_cloud_template.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            type="primary"
+        )
+    
+    with col2:
+        st.info("💡 The template includes example rows for ECS (virtual machines), Database (RDS), and OSS (object storage). You can delete the examples and replace them with your actual requirements.")
+    
+    st.markdown("---")
+    
+    st.markdown("### Step 2: Fill with Your Data")
+    st.markdown("Open the downloaded template in Excel or Google Sheets and fill in your resource specifications.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Option A: Manual Entry**")
+        st.markdown("""
+        - Open the template in Excel
+        - Replace example rows with your data
+        - Refer to the 🤖 LLM Guide tab for field descriptions
+        """)
+    with col2:
+        st.markdown("**Option B: Use AI Assistant** 🤖 *(Recommended)*")
+        st.markdown("""
+        - Let ChatGPT, Claude, or your favorite AI fill the template
+        - Check the 🤖 LLM Guide tab for ready-to-use prompts
+        - Just describe your infrastructure in plain English
+        """)
+    
+    st.markdown("---")
+    
+    st.markdown("### Step 3: Upload & Calculate")
+    st.markdown("Return to the **📊 Calculator** tab, upload your filled template, and click 'Run Calculation' to get your pricing.")
+    
+    st.success("✨ That's it! You'll get detailed cost breakdowns, optimization suggestions, and downloadable reports.")
+    
+    st.markdown("---")
+    
+    with st.expander("📋 Quick Reference: Resource Types"):
+        st.markdown("""
+        **🖥️ ECS (Elastic Cloud Server)** — Virtual Machines
+        - Use for: Web servers, application servers, general compute
+        - Required fields: Resource Type, vCPUs, RAM (GB), Storage (GB), Storage Type
+        - Example: 4 vCPUs, 16 GB RAM, 200 GB SSD
+        
+        **🗄️ Database (RDS)** — Managed Databases
+        - Use for: MySQL or PostgreSQL databases
+        - Required fields: All ECS fields + DB Type (mysql/postgresql), Deployment (single/ha)
+        - Example: 4 vCPUs, 16 GB RAM, 500 GB UltraHighIO, MySQL, HA mode
+        
+        **📦 OSS (Object Storage Service)** — Cloud Storage
+        - Use for: File storage, backups, static assets
+        - Required fields: Resource Type, Storage (GB), Storage Type, Requests Read/Write/Delete, Internet Outbound GB
+        - vCPUs and RAM should be 0 for OSS
+        - Example: 1000 GB Standard storage, 10000 read requests, 5000 write requests
+        """)
+
+
+def render_llm_guide_tab():
+    st.markdown("## 🤖 Using AI to Fill Your Template")
+    st.markdown("Learn how to leverage ChatGPT, Claude, Gemini, or other AI assistants to quickly populate your template.")
+    st.markdown("---")
+    
+    st.info("🚧 **Coming in Phase 2** — This tab will contain:")
+    st.markdown("""
+    - Ready-to-use prompt templates for ChatGPT/Claude
+    - Step-by-step guide for converting natural language to structured data
+    - Example conversations showing AI-assisted template filling
+    - Tips for getting the best results from AI assistants
+    """)
+    
+    st.markdown("---")
+    st.markdown("### Quick Preview")
+    st.markdown("""
+    **The basic workflow will be:**
+    
+    1. **Copy our optimized prompt** from this tab
+    2. **Paste into ChatGPT/Claude** with your requirements
+    3. **Get a perfectly formatted table** ready for the template
+    4. **Copy-paste into Excel** and upload!
+    
+    **Example:**
+    
+    *You:* "I need 2 web servers with 4 CPU, 16GB RAM, 200GB SSD each, plus a PostgreSQL database with 8 CPU, 32GB RAM in HA mode"
+    
+    *AI:* Generates a table with all required columns filled correctly
+    
+    No more guessing column names or valid values!
+    """)
+
+
 def main():
     st.set_page_config(
         page_title="Huawei Cloud Pricing Tool",
@@ -224,11 +382,28 @@ def main():
     st.title("☁️ Huawei Cloud Pricing Tool")
     st.markdown(f"**Region:** {DEFAULT_REGION_NAME} (`{DEFAULT_REGION}`)")
     st.markdown("---")
+    
+    # Load data for all tabs
     ecs_data = load_ecs_pricing()
     db_data = load_db_pricing()
     storage_data = load_storage_pricing()
     oss_data = load_oss_pricing()
     available_db_types = get_available_db_types(db_data)
+    
+    # Tab navigation
+    tab_calc, tab_guide, tab_llm = st.tabs(["📊 Calculator", "🚀 Getting Started", "🤖 LLM Guide"])
+    
+    with tab_calc:
+        render_calculator_tab(ecs_data, db_data, storage_data, oss_data, available_db_types)
+    
+    with tab_guide:
+        render_getting_started_tab()
+    
+    with tab_llm:
+        render_llm_guide_tab()
+
+
+def render_calculator_tab(ecs_data, db_data, storage_data, oss_data, available_db_types):
     with st.sidebar:
         st.header("Configuration")
         st.subheader("Upload File")
