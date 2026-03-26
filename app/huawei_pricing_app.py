@@ -523,12 +523,10 @@ def main():
                     with btn_col1:
                         if st.button("☑️ Select All", key="select_all_btn"):
                             st.session_state.select_all_state = 'all'
-                            st.rerun()
                     
                     with btn_col2:
                         if st.button("⬜ Clear All", key="clear_all_btn"):
                             st.session_state.select_all_state = 'none'
-                            st.rerun()
                     
                     with btn_col3:
                         if st.button("🚀 Apply Selected", type="primary", key="apply_selected_btn"):
