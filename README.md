@@ -47,11 +47,11 @@ The application will open in your browser at `http://localhost:8501`
 |---------|-------------|
 | **Excel Template Loading** | Upload standardized Excel files with VM, database, and storage specifications |
 | **Automatic Flavor Mapping** | Maps vCPUs and RAM requirements to the best matching Huawei Cloud ECS and RDS flavors |
-| **Multi-Resource Support** | Handles ECS (VMs), RDS (MySQL/PostgreSQL), and OSS (Object Storage) |
+| **Multi-Resource Support** | Handles ECS (VMs), RDS (MySQL/PostgreSQL), and OBS (Object Storage) |
 | **Flexible Pricing Models** | Calculate costs for Hourly (Pay-per-use), Monthly, or Yearly billing |
 | **Database Deployment Options** | Supports both Single and High Availability (HA) deployment modes |
 | **Storage Cost Calculation** | Calculates costs for SSD, HighIO, UltraHighIO, and GeneralSSDv2 storage types |
-| **OSS Cost Modeling** | Full Object Storage cost calculation including storage, requests, retrieval, and traffic |
+| **OBS Cost Modeling** | Full Object Storage cost calculation including storage, requests, retrieval, and traffic |
 | **Summary Reports** | Cost breakdowns by resource type, flavor family, and deployment mode |
 | **Excel Export** | Download enriched results with multiple sheets for analysis |
 | **"Needs Review" Flagging** | Automatically flags resources that require manual review |
@@ -148,7 +148,7 @@ Click "Download Enriched Excel" to save your results. The exported file includes
 - **Summary sheet:** High-level cost breakdown by service
 - **ECS sheet:** ECS-specific results with flavor family breakdown
 - **Database sheet:** Database results with type and deployment summaries
-- **OSS sheet:** Object Storage results with cost component breakdown
+- **OBS sheet:** Object Storage results with cost component breakdown
 - **Unmapped Resources sheet:** Items flagged for review
 
 ---
@@ -159,9 +159,9 @@ Click "Download Enriched Excel" to save your results. The exported file includes
 
 | Column | Required | Description | Valid Values | Example |
 |--------|----------|-------------|--------------|---------|
-| **Resource Type** | Yes | Type of cloud resource | `ECS`, `Database`, `OSS` | `ECS` |
-| **vCPUs** | Yes* | Number of virtual CPUs | Integer (0 for OSS) | `4` |
-| **RAM (GB)** | Yes* | Memory in gigabytes | Integer (0 for OSS) | `16` |
+| **Resource Type** | Yes | Type of cloud resource | `ECS`, `Database`, `OBS` | `ECS` |
+| **vCPUs** | Yes* | Number of virtual CPUs | Integer (0 for OBS) | `4` |
+| **RAM (GB)** | Yes* | Memory in gigabytes | Integer (0 for OBS) | `16` |
 | **Storage (GB)** | Yes | Storage size in gigabytes | Integer | `200` |
 | **Storage Type** | Yes | Storage type or class | See below | `SSD` |
 | **Region** | No | Huawei Cloud region | `ap-southeast-3` (default) | `ap-southeast-3` |
@@ -169,7 +169,7 @@ Click "Download Enriched Excel" to save your results. The exported file includes
 | **Desired Tier** | No | Preferred ECS flavor family | See ECS tiers below | `general-computing-plus` |
 | **DB Type** | No** | Database engine type | `mysql`, `postgresql` | `mysql` |
 | **Deployment** | No** | Database deployment mode | `single`, `ha` | `ha` |
-| **Availability Zone** | No*** | OSS availability zone type | `single-az`, `multi-az` | `single-az` |
+| **Availability Zone** | No*** | OBS availability zone type | `single-az`, `multi-az` | `single-az` |
 | **Requests Read** | No*** | Number of read requests | Integer | `10000` |
 | **Requests Write** | No*** | Number of write requests | Integer | `5000` |
 | **Requests Delete** | No*** | Number of delete requests | Integer | `1000` |
@@ -177,9 +177,9 @@ Click "Download Enriched Excel" to save your results. The exported file includes
 | **Retrieval Type** | No*** | Archive retrieval type | `Standard`, `Urgent`, `DirectReading` | `Standard` |
 | **Internet Outbound GB** | No*** | Internet outbound traffic in GB | Integer or Decimal | `500` |
 
-\* Not required for OSS resources (set to 0)
+\* Not required for OBS resources (set to 0)
 \** Required for Database resources if not using defaults
-\*** Required for OSS resources only
+\*** Required for OBS resources only
 
 ### Storage Types by Resource
 
@@ -190,7 +190,7 @@ Click "Download Enriched Excel" to save your results. The exported file includes
 - `GeneralSSDv2` - General purpose SSD v2
 - `ExtremeSSD` - Extreme performance SSD
 
-**OSS (Object Storage Classes):**
+**OBS (Object Storage Classes):**
 - `Standard` - Frequently accessed data
 - `InfrequentAccess` - Infrequently accessed data
 - `Archive` - Long-term archive storage
@@ -231,9 +231,9 @@ DB Type: postgresql
 Deployment: ha
 ```
 
-**OSS Example:**
+**OBS Example:**
 ```
-Resource Type: OSS
+Resource Type: OBS
 vCPUs: 0
 RAM (GB): 0
 Storage (GB): 10000
@@ -336,7 +336,7 @@ Resources flagged with "Needs Review" require manual attention:
 |--------|---------|---------------|
 | **Needs Review** | No matching flavor found | Check your specifications, consider adjusting vCPUs/RAM |
 | **Needs Review - Partial Match** | Suboptimal match found | Review the mapped flavor to ensure it meets requirements |
-| **Unknown Resource Type** | Invalid Resource Type value | Use only `ECS`, `Database`, or `OSS` |
+| **Unknown Resource Type** | Invalid Resource Type value | Use only `ECS`, `Database`, or `OBS` |
 | **Unknown DB Type: X** | Invalid database type specified | Use only `mysql` or `postgresql` |
 
 ---
@@ -354,13 +354,13 @@ Resources flagged with "Needs Review" require manual attention:
 2. Copy your data into the template, ensuring all columns are filled
 3. Required columns: Resource Type, vCPUs, RAM (GB), Storage (GB), Storage Type, Quantity
 
-#### Error: "Invalid Resource Type: 'X'. Valid values: ECS, Database, OSS"
+#### Error: "Invalid Resource Type: 'X'. Valid values: ECS, Database, OBS"
 
 **Cause:** The Resource Type column contains an unrecognized value.
 
 **Solution:**
 - Check for typos (case-sensitive: use `ECS`, not `ecs`)
-- Use only: `ECS`, `Database`, or `OSS`
+- Use only: `ECS`, `Database`, or `OBS`
 - Remove any extra spaces before or after the value
 
 #### Error: "Unknown Storage Type 'X'"
@@ -369,7 +369,7 @@ Resources flagged with "Needs Review" require manual attention:
 
 **Solution:**
 - For ECS/Database: Use `SSD`, `HighIO`, `UltraHighIO`, `GeneralSSDv2`, or `ExtremeSSD`
-- For OSS: Use `Standard`, `InfrequentAccess`, `Archive`, or `DeepArchive`
+- For OBS: Use `Standard`, `InfrequentAccess`, `Archive`, or `DeepArchive`
 - Check for extra spaces or typos
 
 #### Warning: "Database not mapping"
@@ -596,9 +596,9 @@ pip install pyinstaller
 }
 ```
 
-### OSS Pricing Format (`oss_pricing.json`)
+### OBS Pricing Format (`oss_pricing.json`)
 
-The OSS pricing file contains detailed pricing for storage classes, requests, data retrieval, and traffic. See the full file for complete structure.
+The OBS pricing file contains detailed pricing for storage classes, requests, data retrieval, and traffic. See the full file for complete structure.
 
 ---
 
@@ -629,7 +629,7 @@ Copyright (c) 2024. All rights reserved.
 
 ### Version 1.0
 - Initial release
-- Support for ECS, RDS (MySQL/PostgreSQL), and OSS
+- Support for ECS, RDS (MySQL/PostgreSQL), and OBS
 - Hourly, Monthly, and Yearly pricing models
 - Excel import/export functionality
 - Windows executable build support

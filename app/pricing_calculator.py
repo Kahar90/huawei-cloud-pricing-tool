@@ -140,7 +140,7 @@ def get_cost_savings_summary(
     total_potential_savings = 0
     savings_opportunities = []
     
-    # Calculate total current cost from ALL resources (ECS + Database + OSS + Storage)
+    # Calculate total current cost from ALL resources (ECS + Database + OBS + Storage)
     # This ensures consistency with the main calculation
     total_current_cost = result_df['Total Cost for Quantity'].sum()
     
@@ -648,7 +648,7 @@ def calculate_all_costs(
         mapping = mapping_results[idx]
         resource_type = str(row.get('Resource Type', 'ECS')).strip()
         
-        # Handle vCPUs and RAM - OSS resources don't have these
+        # Handle vCPUs and RAM - OBS resources don't have these
         if resource_type.lower() == 'oss':
             vcpus = 0
             ram_gb = 0
@@ -669,7 +669,7 @@ def calculate_all_costs(
         storage_cost = 0
         
         if resource_type.lower() == 'oss':
-            # Handle OSS resources
+            # Handle OBS resources
             oss_storage_class = str(row.get('Storage Type', 'Standard')).strip()
             availability_zone = str(row.get('Availability Zone', 'single-az')).strip()
             
@@ -695,7 +695,7 @@ def calculate_all_costs(
                 internet_outbound_gb, oss_data
             )
             compute_cost = oss_costs['total_cost']
-            storage_cost = 0  # OSS storage is included in compute_cost via get_oss_cost
+            storage_cost = 0  # OBS storage is included in compute_cost via get_oss_cost
             total_cost_per_instance = compute_cost
             total_cost_for_quantity = total_cost_per_instance * quantity
             result_row = {
@@ -712,10 +712,10 @@ def calculate_all_costs(
                 'Retrieval Type': retrieval_type,
                 'Internet Outbound GB': internet_outbound_gb,
                 'Compute Cost (Monthly)': round(compute_cost, 2),
-                'OSS Storage Cost': round(oss_costs['storage_cost'], 4),
-                'OSS Request Cost': round(oss_costs['request_cost'], 4),
-                'OSS Retrieval Cost': round(oss_costs['retrieval_cost'], 4),
-                'OSS Traffic Cost': round(oss_costs['traffic_cost'], 4),
+                'OBS Storage Cost': round(oss_costs['storage_cost'], 4),
+                'OBS Request Cost': round(oss_costs['request_cost'], 4),
+                'OBS Retrieval Cost': round(oss_costs['retrieval_cost'], 4),
+                'OBS Traffic Cost': round(oss_costs['traffic_cost'], 4),
                 'Total Cost per Instance': round(total_cost_per_instance, 2),
                 'Total Cost for Quantity': round(total_cost_for_quantity, 2),
                 'Mapping Status': status
@@ -774,10 +774,10 @@ def compute_summary(df: pd.DataFrame, pricing_model: str, hours_per_month: float
         summary_by_deployment = {}
     oss_df = df[df['Resource Type'].str.lower() == 'oss']
     if not oss_df.empty:
-        oss_total_storage = oss_df['OSS Storage Cost'].sum() if 'OSS Storage Cost' in oss_df.columns else 0
-        oss_total_request = oss_df['OSS Request Cost'].sum() if 'OSS Request Cost' in oss_df.columns else 0
-        oss_total_retrieval = oss_df['OSS Retrieval Cost'].sum() if 'OSS Retrieval Cost' in oss_df.columns else 0
-        oss_total_traffic = oss_df['OSS Traffic Cost'].sum() if 'OSS Traffic Cost' in oss_df.columns else 0
+        oss_total_storage = oss_df['OBS Storage Cost'].sum() if 'OBS Storage Cost' in oss_df.columns else 0
+        oss_total_request = oss_df['OBS Request Cost'].sum() if 'OBS Request Cost' in oss_df.columns else 0
+        oss_total_retrieval = oss_df['OBS Retrieval Cost'].sum() if 'OBS Retrieval Cost' in oss_df.columns else 0
+        oss_total_traffic = oss_df['OBS Traffic Cost'].sum() if 'OBS Traffic Cost' in oss_df.columns else 0
         summary_by_oss_storage_class = oss_df.groupby('Storage Type')['Total Cost for Quantity'].sum().to_dict()
     else:
         oss_total_storage = 0
@@ -815,7 +815,7 @@ def create_output_excel(df: pd.DataFrame, summary: Dict, output: Union[str, Byte
         summary_table = pd.DataFrame([
             {'Service': 'ECS', 'Count': int(ecs_df['Quantity'].sum()), 'Total Cost': summary['by_type'].get('ECS', 0)},
             {'Service': 'Database', 'Count': int(db_df['Quantity'].sum()), 'Total Cost': summary['by_type'].get('Database', 0)},
-            {'Service': 'OSS', 'Count': int(oss_df['Quantity'].sum()), 'Total Cost': summary['by_type'].get('OSS', 0)},
+            {'Service': 'OBS', 'Count': int(oss_df['Quantity'].sum()), 'Total Cost': summary['by_type'].get('OBS', 0)},
             {'Service': 'GRAND TOTAL', 'Count': int(df['Quantity'].sum()), 'Total Cost': summary['total_monthly_cost']}
         ])
         summary_table.to_excel(writer, sheet_name='Summary', index=False)
@@ -850,16 +850,16 @@ def create_output_excel(df: pd.DataFrame, summary: Dict, output: Union[str, Byte
                 ])
                 deployment_df.to_excel(writer, sheet_name='Database', index=False, startrow=start_row)
         
-        # 5. OSS sheet - OSS rows + OSS metrics summary
+        # 5. OBS sheet - OBS rows + OBS metrics summary
         if not oss_df.empty:
-            oss_df.to_excel(writer, sheet_name='OSS', index=False)
+            oss_df.to_excel(writer, sheet_name='OBS', index=False)
             oss_summary_df = pd.DataFrame([
-                {'OSS Metric': 'Total Storage Cost', 'Value': summary.get('oss_storage_cost', 0)},
-                {'OSS Metric': 'Total Request Cost', 'Value': summary.get('oss_request_cost', 0)},
-                {'OSS Metric': 'Total Retrieval Cost', 'Value': summary.get('oss_retrieval_cost', 0)},
-                {'OSS Metric': 'Total Traffic Cost', 'Value': summary.get('oss_traffic_cost', 0)}
+                {'OBS Metric': 'Total Storage Cost', 'Value': summary.get('oss_storage_cost', 0)},
+                {'OBS Metric': 'Total Request Cost', 'Value': summary.get('oss_request_cost', 0)},
+                {'OBS Metric': 'Total Retrieval Cost', 'Value': summary.get('oss_retrieval_cost', 0)},
+                {'OBS Metric': 'Total Traffic Cost', 'Value': summary.get('oss_traffic_cost', 0)}
             ])
-            oss_summary_df.to_excel(writer, sheet_name='OSS', index=False, startrow=len(oss_df) + 3)
+            oss_summary_df.to_excel(writer, sheet_name='OBS', index=False, startrow=len(oss_df) + 3)
         
         # 6. Unmapped Resources sheet - unchanged
         unmapped_df = df[df['Mapping Status'].str.contains('Review', case=False, na=False)]

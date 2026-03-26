@@ -29,8 +29,8 @@ DB_CONFIGS = [
     {'vCPUs': 8, 'RAM (GB)': 16, 'Storage (GB)': 1000, 'Storage Type': 'SSD', 'Quantity': 2, 'DB Type': 'mysql', 'Deployment': 'single'},
 ]
 
-# OSS configurations (2 rows, 500GB each)
-OSS_CONFIGS = [
+# OBS configurations (2 rows, 500GB each)
+OBS_CONFIGS = [
     {'Storage (GB)': 500, 'Storage Type': 'Standard', 'Quantity': 1, 'Availability Zone': 'single-az'},
     {'Storage (GB)': 500, 'Storage Type': 'Standard', 'Quantity': 1, 'Availability Zone': 'multi-az'},
 ]
@@ -85,10 +85,10 @@ def generate_realistic_test_file():
         }
         entries.append(entry)
     
-    # Add OSS entries (2 rows, 500GB each)
-    for config in OSS_CONFIGS:
+    # Add OBS entries (2 rows, 500GB each)
+    for config in OBS_CONFIGS:
         entry = {
-            'Resource Type': 'OSS',
+            'Resource Type': 'OBS',
             'vCPUs': 0,
             'RAM (GB)': 0,
             'Storage (GB)': config['Storage (GB)'],
@@ -123,7 +123,7 @@ def generate_realistic_test_file():
     print(f"\n📊 File contents:")
     print(f"   - ECS: 10 rows")
     print(f"   - Database: 5 rows")
-    print(f"   - OSS: 2 rows (500GB each)")
+    print(f"   - OBS: 2 rows (500GB each)")
     print(f"\n📈 Summary:")
     print(f"   Total resources: {len(df)}")
     print(f"\n💡 Use this file to test cost optimization!")

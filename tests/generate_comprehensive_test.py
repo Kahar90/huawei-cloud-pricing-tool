@@ -1,6 +1,6 @@
 """
 Generate comprehensive test Excel file for Huawei Cloud Pricing Tool
-Covers: ECS, Database, OSS with various edge cases and configurations
+Covers: ECS, Database, OBS with various edge cases and configurations
 """
 
 import pandas as pd
@@ -30,8 +30,8 @@ DB_VCPUS_RAM = [
     (2, 8), (4, 8), (4, 16), (8, 16), (8, 32), (16, 64)
 ]
 
-# OSS configurations
-OSS_STORAGE_CLASSES = ['Standard', 'InfrequentAccess', 'Archive', 'DeepArchive']
+# OBS configurations
+OBS_STORAGE_CLASSES = ['Standard', 'InfrequentAccess', 'Archive', 'DeepArchive']
 AZ_TYPES = ['single-az', 'multi-az']
 RETRIEVAL_TYPES = ['Standard', 'Urgent', 'DirectReading', '']
 
@@ -307,12 +307,12 @@ def generate_database_entries(count=20):
     return entries
 
 def generate_oss_entries(count=10):
-    """Generate OSS test entries with various configurations"""
+    """Generate OBS test entries with various configurations"""
     entries = []
     
     # Standard storage
     entries.append({
-        'Resource Type': 'OSS',
+        'Resource Type': 'OBS',
         'vCPUs': '',
         'RAM (GB)': '',
         'Storage (GB)': 1000,
@@ -333,7 +333,7 @@ def generate_oss_entries(count=10):
     
     # Infrequent Access
     entries.append({
-        'Resource Type': 'OSS',
+        'Resource Type': 'OBS',
         'vCPUs': '',
         'RAM (GB)': '',
         'Storage (GB)': 5000,
@@ -354,7 +354,7 @@ def generate_oss_entries(count=10):
     
     # Archive
     entries.append({
-        'Resource Type': 'OSS',
+        'Resource Type': 'OBS',
         'vCPUs': '',
         'RAM (GB)': '',
         'Storage (GB)': 10000,
@@ -375,7 +375,7 @@ def generate_oss_entries(count=10):
     
     # Deep Archive
     entries.append({
-        'Resource Type': 'OSS',
+        'Resource Type': 'OBS',
         'vCPUs': '',
         'RAM (GB)': '',
         'Storage (GB)': 50000,
@@ -396,7 +396,7 @@ def generate_oss_entries(count=10):
     
     # Multi-az Standard
     entries.append({
-        'Resource Type': 'OSS',
+        'Resource Type': 'OBS',
         'vCPUs': '',
         'RAM (GB)': '',
         'Storage (GB)': 2000,
@@ -418,13 +418,13 @@ def generate_oss_entries(count=10):
     # Random combinations for remaining entries
     remaining = count - len(entries)
     for _ in range(remaining):
-        storage_class = random.choice(OSS_STORAGE_CLASSES)
+        storage_class = random.choice(OBS_STORAGE_CLASSES)
         # Archive and DeepArchive have retrieval costs
         retrieval_gb = random.choice([0, 100, 500, 1000]) if 'Archive' in storage_class else 0
         retrieval_type = random.choice(RETRIEVAL_TYPES) if retrieval_gb > 0 else ''
         
         entries.append({
-            'Resource Type': 'OSS',
+            'Resource Type': 'OBS',
             'vCPUs': '',
             'RAM (GB)': '',
             'Storage (GB)': random.choice([500, 1000, 5000, 10000, 50000]),
@@ -475,7 +475,7 @@ def main():
     print(f"\nSummary:")
     print(f"  - ECS entries: {len(ecs_entries)}")
     print(f"  - Database entries: {len(db_entries)}")
-    print(f"  - OSS entries: {len(oss_entries)}")
+    print(f"  - OBS entries: {len(oss_entries)}")
     print(f"  - Total entries: {len(all_entries)}")
     print(f"\nFile saved to: {output_path}")
     print(f"\nYou can now test the app by uploading this file to the Streamlit interface.")
